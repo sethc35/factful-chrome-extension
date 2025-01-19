@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="widget.css">
+    </head>
+    
+<body>
+    <div class="widget-container">
+        <div class="logo">
+            <img src="assets/factful-icon.png" alt="Factful Logo">
+            <div>
+                <span>Factful</span>
+                <small>for Chrome</small>
+            </div>
+        </div>
+
+        <div class="section-title-main">Output Settings</div>
+        
+        <div class="section-title">Expected Output</div>
+        <div class="button-group output-type">
+            <button class="option-button active" data-type="detailed">Detailed</button>
+            <button class="option-button" data-type="summarized">Summarized</button>
+            <button class="option-button" data-type="neutral">Neutral</button>
+        </div>
+
+        <div class="slider-container">
+            <div class="section-title">Max Output Length</div>
+            <input type="range" class="slider" min="0" max="100" value="50">
+            <div class="slider-label">Up to 1000 chars</div>
+        </div>
+
+        <div class="toggle-container">
+            <span class="toggle-label">Allow Wikipedia For Nuanced Queries</span>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider-toggle"></span>
+            </label>
+        </div>
+
+        <div class="toggle-container">
+            <span class="toggle-label">Provide Correction Sources</span>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider-toggle"></span>
+            </label>
+        </div>
+
+        <div class="language-container">
+            <span class="section-title language-title">Language Locale</span>
+            <select class="language-select">
+
+                <option value="en-US">
+                    US English
+                </option>
+                <option value="en-CA">
+                    Canadian English
+
+                    <!-- <img src="assets/canada.png" alt="Canada Flag" class="flag-icon">  -->
+                </option>
+                
+                    <!-- <img src="assets/usa.png" alt="USA Flag" class="flag-icon"> US English -->
+                </option>
+                <option value="en-GB">
+                    British English
+                    <!-- <img src="assets/britain.png" alt="Britain Flag" class="flag-icon"> British English -->
+                </option>
+            </select>
+        </div>
+         
+        <!--
+        <div class="status">
+            <div class="icon-bg">
+                <img src="assets/on.png" alt="ON Icon" class="on-icon" />
+            </div>
+            <div>Factful is Enabled</div>
+        </div>
+        -->
+        
+        
+        
+        <div id="debugOutput"></div>
+    </div>
+
+    <script src="widget.js"></script>
+</body>
+</html>

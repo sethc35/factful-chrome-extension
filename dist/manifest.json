@@ -1,0 +1,32 @@
+{
+    "name": "Factful: Integrated AI Writing Assistant and Environment",
+    "version": "1.2",
+    "manifest_version": 3,
+    "content_scripts": [
+      {
+        "matches": ["*://docs.google.com/document/*"],
+        "all_frames": true,
+        "js": ["gdocs-main.js"],
+        "run_at": "document_start",
+        "world": "MAIN"
+      }
+    ],
+    "action": {
+      "default_icon": {
+        "16": "assets/factful-icon-transparent.png",
+        "48": "assets/factful-icon-transparent.png",
+        "128": "assets/factful-icon-transparent.png"
+      },
+      "default_popup": "widget.html"
+    },
+    "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com"
+    },
+    "web_accessible_resources": [{
+      "resources": [
+        "assets/*"
+      ],
+      "matches": ["<all_urls>"]
+    }]
+  }
+  
