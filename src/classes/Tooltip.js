@@ -1,7 +1,6 @@
-import { Underline } from "./Underline"
-
 export class Tooltip {
-  constructor() {
+  constructor(findTextDifferencesCallback) {
+    this.findTextDifferencesCallback = findTextDifferencesCallback
     this.tooltip = document.createElement("div")
     this.tooltip.style.position = "absolute"
     this.tooltip.style.padding = "12px 16px"
@@ -117,7 +116,7 @@ export class Tooltip {
         await new Promise(r => setTimeout(r, 50))
         document.execCommand("delete")
         await new Promise(r => setTimeout(r, 50))
-        const differences = Underline.findTextDifferences(
+        const differences = this.findTextDifferencesCallback(
           this.currentHoveredElement.originalText,
           this.currentHoveredElement.corrected_text
         )
