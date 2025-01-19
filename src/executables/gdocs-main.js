@@ -1,112 +1,296 @@
 /* eslint-disable */
 
-import { SlashCommand } from "../classes/SlashCommand.js";
-import { Tooltip } from "../classes/Tooltip.js";
-import { Underline } from "../classes/Underline.js";
-import { ApiService } from "../utils/Api.js";
+"use strict";
 
-(async function gdocsMain() {
-//   const runState = localStorage.getItem("factful-extension-can-run")
-//   if (runState === "false") {
-//     console.log("[Enhanced Text Tracker] Extension is disabled, exiting.")
-//     return
-//   }
+export function initializeGDocsTracker() {
+  window._docs_annotate_canvas_by_ext = "kbfnbcaeplbcioakkpcpgfkobkghlhen";
 
-  const underline = new Underline()
-  const tooltip = new Tooltip()
-  const slashCommand = new SlashCommand()
+  function waitForEditorReady(callback) {
+    const observer = new MutationObserver(() => {
+      const editor = document.querySelector(".kix-appview-editor");
+      if (editor) {
+        observer.disconnect();
+        console.log("[Enhanced Text Tracker] Editor is ready.");
+        callback();
+      }
+    });
 
-  await new Promise(resolve => {
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function deferExecution() {
     if (document.readyState === "complete" || document.readyState === "interactive") {
-      resolve()
+      waitForEditorReady(runMainScript);
     } else {
-      document.addEventListener("DOMContentLoaded", resolve, false)
-    }
-  })
-
-  const docText = await ApiService.collectTextFromRects()
-  const apiData = await ApiService.fetchDataFromApi()
-  const corrections = ApiService.findCorrectionsInDocument(apiData, docText)
-
-  // 5) Apply underlines to the doc
-  underline.buildRectCharIndexMapping()
-  underline.applyUnderlines(corrections, true)
-
-  setupSlashListeners()
-  observeDocChanges()
-
-  console.log("[Enhanced Text Tracker] gdocs-main.js init complete.")
-
-  function setupSlashListeners() {
-    attachListeners(document)
-
-    const editingIframe = document.querySelector(".docs-texteventtarget-iframe")
-    if (editingIframe && editingIframe.contentDocument) {
-      attachListeners(editingIframe.contentDocument)
-    } else if (editingIframe) {
-      editingIframe.addEventListener("load", () => {
-        attachListeners(editingIframe.contentDocument)
-      })
+      document.addEventListener("DOMContentLoaded", () => {
+        waitForEditorReady(runMainScript);
+      });
     }
   }
 
-  function attachListeners(doc) {
-    doc.addEventListener("keydown", e => {
-      if (e.key === "/" || e.keyCode === 191) {
-        console.log("[SlashCommand] Detected slash key")
-        const cursor = document.querySelector(".kix-cursor") ||
-                       document.querySelector(".docs-text-ui-cursor-blink")
-        if (!cursor) return
-        const rect = cursor.getBoundingClientRect()
-        slashCommand.isActive = true
-        slashCommand.currentInput = "/"
-        slashCommand.showSlashCommands(rect, "/")
-      }
-    }, true)
+  async function runMainScript() {
+    console.log("[Enhanced Text Tracker] Initializing...");
 
-    doc.addEventListener("input", e => {
-      if (!slashCommand.isActive) return
-      const selection = doc.getSelection()
-      if (!selection || !selection.rangeCount) return
-      const range = selection.getRangeAt(0)
-      const node = range.startContainer
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent
-        const position = range.startOffset
-        const slashIndex = text.lastIndexOf("/", position)
-        if (slashIndex >= 0) {
-          const commandText = text.substring(slashIndex, position)
-          slashCommand.currentInput = commandText
-          const cursor = document.querySelector(".kix-cursor") ||
-                         document.querySelector(".docs-text-ui-cursor-blink")
-          if (cursor) {
-            const rect = cursor.getBoundingClientRect()
-            slashCommand.showSlashCommands(rect, commandText)
-          }
+    const [
+      { SlashCommand },
+      { Underline },
+      { ApiService },
+      { debounce }
+    ] = await Promise.all([
+      import("../classes/SlashCommand.js"),
+      import("../classes/Underline.js"),
+      import("../utils/Api.js"),
+      import("../utils/debounce.js")
+    ]);
+
+    const underline = new Underline();
+    const slashCommand = new SlashCommand();
+
+    let apiData = await ApiService.fetchDataFromApi();
+    let corrections = [];
+
+    {
+      const docText = await ApiService.collectTextFromRects();
+      corrections = ApiService.findCorrectionsInDocument(apiData, docText);
+      underline.buildRectCharIndexMapping();
+      underline.applyUnderlines(corrections, true);
+    }
+
+    setupSlashListeners();
+    observeDocChanges();
+
+    console.log("[Enhanced Text Tracker] gdocs-main.js init complete.");
+
+    function setupSlashListeners() {
+      attachListeners(document);
+      const editingIframe = document.querySelector(".docs-texteventtarget-iframe");
+      if (editingIframe) {
+        if (editingIframe.contentDocument) {
+          attachListeners(editingIframe.contentDocument);
         } else {
-          slashCommand.hideSlashCommandUI()
+          editingIframe.addEventListener("load", () => {
+            attachListeners(editingIframe.contentDocument);
+          });
         }
       }
-    }, true)
-  }
+    }
 
-  function observeDocChanges() {
-    const editor = document.querySelector(".kix-appview-editor")
-    if (!editor) return
+    function attachListeners(doc) {
+      doc.addEventListener(
+        "keydown",
+        e => {
+          if (e.key === "/" || e.keyCode === 191) {
+            const cursor =
+              document.querySelector(".kix-cursor") ||
+              document.querySelector(".docs-text-ui-cursor-blink");
+            if (!cursor) return;
+            const rect = cursor.getBoundingClientRect();
+            slashCommand.isActive = true;
+            slashCommand.currentInput = "/";
+            slashCommand.showSlashCommands(rect, "/");
+          }
+        },
+        true
+      );
 
-    // const observer = new MutationObserver(mutations => {
-    //   let docChanged = false
-    //   for (const mut of mutations) {
-    //     if (mut.type === "childList" || mut.type === "attributes") {
-    //       docChanged = true
-    //       break
-    //     }
-    //   }
-    //   if (docChanged) {
-    //     console.log("[Enhanced Text Tracker] Document changed, could re-check if needed.")
-    //   }
-    // })
-    // observer.observe(editor, { subtree: true, childList: true, attributes: true })
-  }
+      doc.addEventListener(
+        "input",
+        e => {
+          if (!slashCommand.isActive) return;
+          const selection = doc.getSelection();
+          if (!selection || !selection.rangeCount) return;
+          const range = selection.getRangeAt(0);
+          const node = range.startContainer;
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const slashIndex = text.lastIndexOf("/", range.startOffset);
+            if (slashIndex >= 0) {
+              const cmdText = text.substring(slashIndex, range.startOffset);
+              slashCommand.currentInput = cmdText;
+              const cursor =
+                document.querySelector(".kix-cursor") ||
+                document.querySelector(".docs-text-ui-cursor-blink");
+              if (cursor) {
+                const rect = cursor.getBoundingClientRect();
+                slashCommand.showSlashCommands(rect, cmdText);
+              }
+            } else {
+              slashCommand.hideSlashCommandUI();
+            }
+          }
+        },
+        true
+      );
+    }
+
+    function observeDocChanges() {
+        const editor = document.querySelector(".kix-appview-editor");
+        if (!editor) {
+          console.error("[Enhanced Text Tracker] .kix-appview-editor not found.");
+          return;
+        }
   
-})();
+        let previousCorrections = new Set();
+  
+        const debouncedApiUpdate = debounce(async () => {
+          console.log("[Enhanced Text Tracker] Starting API update...");
+          const freshText = await ApiService.collectTextFromRects();
+          const newApiData = await ApiService.fetchDataFromApi();
+          apiData = newApiData;
+          const newCorrections = ApiService.findCorrectionsInDocument(
+            apiData,
+            freshText
+          );
+          underline.buildRectCharIndexMapping();
+          underline.applyUnderlines(newCorrections, true);
+          corrections = newCorrections;
+        }, 2000);
+  
+        async function reapplyUnderlines(animate = false) {
+          const docText = await ApiService.collectTextFromRects();
+          const newCorrections = ApiService.findCorrectionsInDocument(apiData, docText);
+          const keysNow = new Set(
+            newCorrections.map(c => `${c.originalText}-${c.error_type}`)
+          );
+          const shouldAnimate =
+            animate ||
+            newCorrections.some(
+              c => !previousCorrections.has(`${c.originalText}-${c.error_type}`)
+            );
+          previousCorrections = keysNow;
+          corrections = newCorrections;
+          underline.buildRectCharIndexMapping();
+          underline.applyUnderlines(corrections, shouldAnimate);
+        }
+  
+        const observer = new MutationObserver(mutations => {
+          let docChanged = false;
+          let positionChanged = false;
+          let textChanged = false;
+          let lastAddedText = "";
+          let iframeAdded = false;
+  
+          for (const mutation of mutations) {
+            if (
+              mutation.target instanceof Element &&
+              mutation.target.closest("[data-enhanced-text-tracker]")
+            ) {
+              continue;
+            }
+            if (
+              mutation.type === "attributes" &&
+              ["x", "y", "transform"].includes(mutation.attributeName) &&
+              mutation.target.tagName.toLowerCase() === "rect"
+            ) {
+              positionChanged = true;
+            }
+            if (mutation.type === "characterData") {
+              textChanged = true;
+              lastAddedText = mutation.target.textContent;
+            }
+            if (
+              mutation.type === "childList" &&
+              (mutation.addedNodes.length || mutation.removedNodes.length)
+            ) {
+              docChanged = true;
+              mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                  textChanged = true;
+                  lastAddedText = node.textContent;
+                }
+                if (
+                  node instanceof Element &&
+                  node.classList &&
+                  node.classList.contains("docs-texteventtarget-iframe")
+                ) {
+                  iframeAdded = true;
+                }
+              });
+            }
+          }
+  
+          // If new iframe
+          if (iframeAdded) {
+            const editingIframe = document.querySelector(".docs-texteventtarget-iframe");
+            if (editingIframe) {
+              if (editingIframe.contentDocument) {
+                attachListeners(editingIframe.contentDocument);
+              } else {
+                editingIframe.addEventListener("load", () => {
+                  attachListeners(editingIframe.contentDocument);
+                });
+              }
+            }
+          }
+  
+          // If slash typed
+          if (textChanged && lastAddedText.includes("/")) {
+            const cursor =
+              document.querySelector(".kix-cursor") ||
+              document.querySelector(".docs-text-ui-cursor-blink");
+            if (cursor) {
+              const rect = cursor.getBoundingClientRect();
+              slashCommand.isActive = true;
+              slashCommand.currentInput = "/";
+              slashCommand.showSlashCommands(rect, "/");
+            }
+          }
+  
+          // If slash is active, update partial command
+          if (textChanged && slashCommand.isActive) {
+            const cursor =
+              document.querySelector(".kix-cursor") ||
+              document.querySelector(".docs-text-ui-cursor-blink");
+            if (cursor) {
+              const rect = cursor.getBoundingClientRect();
+              const slashPos = lastAddedText.lastIndexOf("/");
+              if (slashPos >= 0) {
+                const partialCmd = lastAddedText.substring(slashPos);
+                slashCommand.currentInput = partialCmd;
+                slashCommand.showSlashCommands(rect, partialCmd);
+              }
+            }
+          }
+  
+          // Reposition underlines if rect changed
+          if (positionChanged) {
+            requestAnimationFrame(() => {
+              underline.updateUnderlinePositions();
+              if (slashCommand.isActive) {
+                const cursor =
+                  document.querySelector(".kix-cursor") ||
+                  document.querySelector(".docs-text-ui-cursor-blink");
+                if (cursor) {
+                  const rect = cursor.getBoundingClientRect();
+                  slashCommand.slashCommandUI.style.left = `${rect.left}px`;
+                  slashCommand.slashCommandUI.style.top = `${rect.bottom + 5}px`;
+                }
+              }
+            });
+          }
+  
+          if (docChanged) {
+            requestAnimationFrame(async () => {
+              await reapplyUnderlines(false);
+              debouncedApiUpdate();
+            });
+          }
+        });
+  
+        observer.observe(editor, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          characterData: true,
+          characterDataOldValue: true,
+          attributeFilter: ["x", "y", "transform", "aria-label"]
+        });
+  
+        console.log(
+          "[Enhanced Text Tracker] MutationObserver and event listeners set up."
+        );
+      }
+  }
+
+  deferExecution();
+}

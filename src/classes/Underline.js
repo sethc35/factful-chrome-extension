@@ -1,6 +1,8 @@
 export class Underline {
-    underlineElements = []
-    rectCharIndexMapping = []
+    constructor() {
+        this.underlineElements = [];
+        this.rectCharIndexMapping = [];
+    }      
   
     buildRectCharIndexMapping() {
       let totalCharCount = 0
