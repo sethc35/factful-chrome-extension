@@ -31,16 +31,17 @@ export function initializeGDocsTracker() {
   async function runMainScript() {
     console.log("[Enhanced Text Tracker] Initializing...");
 
+    // dynamic import to wrap everything in iife
     const [
       { SlashCommand },
       { Underline },
       { ApiService },
       { debounce }
     ] = await Promise.all([
-      import("../classes/SlashCommand.js"),
-      import("../classes/Underline.js"),
-      import("../utils/Api.js"),
-      import("../utils/debounce.js")
+      import("../../classes/gdocs/SlashCommand.js"),
+      import("../../classes/gdocs/Underline.js"),
+      import("../../utils/Api.js"),
+      import("../../utils/debounce.js")
     ]);
 
     const underline = new Underline();

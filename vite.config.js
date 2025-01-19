@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        'gdocs-main': 'src/executables/gdocs-entrypoint.js',
+        'gdocs-main': 'src/executables/gdocs/gdocs-entrypoint.js',
         // backend: 'src/utils/Backend.js',
       },
       output: {
