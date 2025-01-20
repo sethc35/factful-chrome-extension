@@ -6,12 +6,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        'gdocs-main': 'src/executables/gdocs/gdocs-entrypoint.js',
-        // backend: 'src/utils/Backend.js',
+        'extension-main': 'src/executables/general/extension-main.js',
+        'backend': 'src/utils/Backend.js'
       },
       output: {
-        entryFileNames: '[name].js',
-        format: 'iife'
+        entryFileNames: '[name].js'
       }
     },
     emptyOutDir: false,

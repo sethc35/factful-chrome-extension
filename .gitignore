@@ -8,8 +8,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist/gdocs-main.js
-dist/vite.svg
+dist
+!dist/manifest.json
+!dist/widget.css
+!dist/widget.html
+!dist/vite.svg
+!dist/assets
 dist-ssr
 *.local
 
