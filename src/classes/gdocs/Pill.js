@@ -182,13 +182,19 @@ export class Pill {
   }
 
   applyInitialStyles() {
-      if (this.numCorrections > 0) {
-          this.pillElement.style.backgroundColor = "#EA4335";
-          this.pillElement.style.height = "110px";
-          const pillNumber = this.pillElement.querySelector(".enhanced-corrections-pill-number");
-          pillNumber.textContent = String(this.numCorrections);
-          pillNumber.style.display = "block";
-      }
+    const pillNumber = this.pillElement.querySelector(".enhanced-corrections-pill-number");
+    
+    if (this.numCorrections > 0) {
+        this.pillElement.style.backgroundColor = "#EA4335";
+        this.pillElement.style.height = "110px";
+        pillNumber.textContent = String(this.numCorrections);
+        pillNumber.style.display = "block";
+    } else {
+        this.pillElement.style.backgroundColor = "#4285f4";
+        this.pillElement.style.height = "60px";
+        pillNumber.textContent = "";
+        pillNumber.style.display = "none";
+    }
   }
 
   attachEventListeners() {
