@@ -216,6 +216,6 @@ export class Tooltip {
           if (this.tooltipElement.style.opacity === '0') {
               this.tooltipElement.style.display = 'none'
           }
-      }, 500)
+      }, 250)
   }
 }

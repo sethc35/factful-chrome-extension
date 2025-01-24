@@ -48,26 +48,15 @@ export class Underline {
         position: absolute;
         height: 2px;
         background-color: rgba(255, 0, 0, 0.6);
-        pointer-events: auto;
+        pointer-events: none;
         cursor: text;
-        transition: all 0.2s ease-out;
         transform-origin: left;
         will-change: transform, background-color, height;
         z-index: 1;
+        transition: background-color 0.2s ease-out, height 0.2s ease-out;
       }
       .precise-underline-overlay {
-          pointer-events: none !important;
-      }
-      .precise-underline::after {
-        content: '';
-        position: absolute;
-        top: -4px;
-        left: 0;
-        right: 0;
-        bottom: -4px;
-        background: transparent;
-        pointer-events: none;
-        z-index: 2;
+        pointer-events: none !important;
       }
       .precise-underline.hovered {
         background-color: #B01030;
@@ -80,12 +69,12 @@ export class Underline {
       }
       .word-highlight {
         position: absolute;
-        pointer-events: none;
-        transition: all 0.2s ease-out;
+        pointer-events: auto;
+        transition: opacity 0.2s ease-out, background-color 0.2s ease-out;
         transform: translateZ(0);
         will-change: transform, opacity;
         opacity: 0;
-        z-index: -1;
+        z-index: 0;
         background-color: rgba(255, 99, 71, 0.1);
       }
       .precise-underline.hovered ~ .word-highlight {
@@ -276,8 +265,12 @@ export class Underline {
             width: ${rect.width}px;
             height: ${rect.height}px;
           `;
+          highlight.dataset.correctionId = correctionId;
           container.appendChild(highlight);
           underlineGroup.highlights.push(highlight);
+
+          highlight.addEventListener('mouseenter', () => this.addHoverEffect(element, highlight));
+          highlight.addEventListener('mouseleave', () => this.removeHoverEffect(element, highlight));
 
           const underline = document.createElement('div');
           underline.className = 'precise-underline';
@@ -288,8 +281,8 @@ export class Underline {
           `;
           underline.dataset.correctionId = correctionId;
 
-          underline.addEventListener('mouseenter', () => this.addHoverEffect(element, underline));
-          underline.addEventListener('mouseleave', () => this.removeHoverEffect(element, underline));
+          // underline.addEventListener('mouseenter', () => this.addHoverEffect(element, underline));
+          // underline.addEventListener('mouseleave', () => this.removeHoverEffect(element, underline));
 
           setTimeout(() => underline.classList.add('animate'), index * 50);
           container.appendChild(underline);
@@ -397,12 +390,14 @@ export class Underline {
               group.underlines[index].style.left = `${offsetLeft}px`;
               group.underlines[index].style.top = `${offsetTop + rect.height - 2}px`;
               group.underlines[index].style.width = `${rect.width}px`;
+              group.underlines[index].style.transition = 'none';
 
               if (group.highlights[index]) {
                 group.highlights[index].style.left = `${offsetLeft}px`;
                 group.highlights[index].style.top = `${offsetTop}px`;
                 group.highlights[index].style.width = `${rect.width}px`;
                 group.highlights[index].style.height = `${rect.height}px`;
+                group.highlights[index].style.transition = 'none';
               }
 
               const absoluteLeft = elementRect.left + (rect.left - mirrorRect.left);
@@ -453,34 +448,30 @@ export class Underline {
     });
   }
 
-  addHoverEffect(element, underline) {
-    const correctionId = underline.dataset.correctionId
+  addHoverEffect(element, highlight) {
+    const correctionId = highlight.dataset.correctionId
     const correctionGroup = this.underlines.get(element)?.find(
       group => group.correctionId === correctionId
     )
     if (correctionGroup) {
-      correctionGroup.underlines.forEach(u => {
-        u.classList.add('hovered')
-      })
+      correctionGroup.underlines.forEach(u => u.classList.add('hovered'))
       correctionGroup.highlights.forEach(h => {
         h.style.opacity = '0.7'
         h.style.backgroundColor = 'rgba(255, 99, 71, 0.7)'
       })
     }
   }
-
-  removeHoverEffect(element, underline) {
-    const correctionId = underline.dataset.correctionId
+  
+  removeHoverEffect(element, highlight) {
+    const correctionId = highlight.dataset.correctionId
     const correctionGroup = this.underlines.get(element)?.find(
       group => group.correctionId === correctionId
     )
     if (correctionGroup) {
-      correctionGroup.underlines.forEach(u => {
-        u.classList.remove('hovered')
-      })
+      correctionGroup.underlines.forEach(u => u.classList.remove('hovered'))
       correctionGroup.highlights.forEach(h => {
         h.style.opacity = '0'
-        h.style.backgroundColor = 'rgba(255, 0, 0, 0.05)'
+        h.style.backgroundColor = 'rgba(255, 99, 71, 0.1)'
       })
     }
   }

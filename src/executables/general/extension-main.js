@@ -225,8 +225,8 @@ function initializeExtension() {
     clearTimeout(tooltipHideTimeout)
     if (!activeElement) return
     const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY)
-    const foundUnderline = Array.from(
-      underline.overlay.getElementsByClassName('precise-underline')
+    const foundHighlight = Array.from(
+      underline.overlay.getElementsByClassName('word-highlight')
     ).find(el => {
       const rect = el.getBoundingClientRect()
       return (
@@ -237,10 +237,10 @@ function initializeExtension() {
       )
     })
     const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'))
-    if ((foundUnderline || isOverTooltip) && activeElement) {
+    if ((foundHighlight || isOverTooltip) && activeElement) {
       let element
-      if (foundUnderline) {
-        const correctionId = foundUnderline.dataset.correctionId
+      if (foundHighlight) {
+        const correctionId = foundHighlight.dataset.correctionId
         const correctionGroup = underline.underlines.get(activeElement)?.filter(
           group => group.correctionId === correctionId
         )
@@ -253,14 +253,14 @@ function initializeExtension() {
       }
       if (element) {
         if (
-          foundUnderline &&
-          (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== foundUnderline.dataset.correctionId)
+          foundHighlight &&
+          (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== foundHighlight.dataset.correctionId)
         ) {
           if (hoveredUnderline) {
             underline.removeHoverEffect(activeElement, hoveredUnderline)
           }
-          underline.addHoverEffect(activeElement, foundUnderline)
-          hoveredUnderline = foundUnderline
+          underline.addHoverEffect(activeElement, foundHighlight)
+          hoveredUnderline = foundHighlight
         }
         if (element.boundingRect) {
           tooltip.showTooltip(element.boundingRect, element.errorType, element.correctedText, element.citations)
