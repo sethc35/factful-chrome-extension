@@ -63,7 +63,7 @@ export class Underline {
         height: 3px;
       }
       .precise-underline.animate {
-        animation: underlineDraw 1s ease-out forwards;
+        animation: underlineDraw 0.5s ease-out forwards;
         animation-iteration-count: 1;
         animation-fill-mode: forwards;
       }
