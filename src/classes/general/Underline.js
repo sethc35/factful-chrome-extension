@@ -281,9 +281,6 @@ export class Underline {
           `;
           underline.dataset.correctionId = correctionId;
 
-          // underline.addEventListener('mouseenter', () => this.addHoverEffect(element, underline));
-          // underline.addEventListener('mouseleave', () => this.removeHoverEffect(element, underline));
-
           setTimeout(() => underline.classList.add('animate'), index * 50);
           container.appendChild(underline);
           underlineGroup.underlines.push(underline);
