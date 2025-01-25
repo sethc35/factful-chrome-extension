@@ -43,6 +43,7 @@ function initializeExtension() {
   const debouncedApiUpdate = debounce(async () => {
     if (!isTyping && activeElement) {
       const apiData = await fetchDataFromBackend(activeElement)
+      console.log('api data fetched from backend: ', apiData);
       if (apiData && apiData.corrections) {
         underline.updateUnderlines(activeElement, apiData.corrections, true)
       }

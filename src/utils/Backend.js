@@ -5,12 +5,14 @@ var Backend = Backend || {};
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
-        const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
+        const response = await fetch(`http://127.0.0.1:5000/process_text?input=${query}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
+
+        console.log('backend response: ', response);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

@@ -52,7 +52,7 @@ export class ApiService {
         const textContent = await ApiService.collectTextFromRects()
         const query = encodeURIComponent(textContent)
         const response = await fetch(
-          `https://backend.factful.io/process_text?input=${query}`,
+          `http://127.0.0.1:5000/process_text?input=${query}`,
           {
             method: "GET",
             headers: {
