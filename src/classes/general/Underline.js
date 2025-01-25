@@ -168,19 +168,26 @@ export class Underline {
       'text-decoration',
       'text-align',
       'direction',
-      'writing-mode'
+      'writing-mode',
+      'padding-top',
+      'padding-right',
+      'padding-bottom',
+      'padding-left'
     ]
     relevantStyles.forEach(style => {
       mirror.style[style] = styles[style]
     })
+
     mirror.style.position = 'absolute'
-    mirror.style.top = '-9999px'
-    mirror.style.left = '-9999px'
-    mirror.style.width = element.offsetWidth + 'px'
-    mirror.style.height = 'auto'
+    mirror.style.top = '0'
+    mirror.style.left = '0'
+    mirror.style.width = `${element.clientWidth}px`
+    mirror.style.height = `${element.clientHeight}px`
     mirror.style.whiteSpace = 'pre-wrap'
     mirror.style.visibility = 'hidden'
-    mirror.style.overflow = 'hidden'
+    mirror.style.overflow = 'auto'
+    mirror.style.wordWrap = 'break-word'
+    
     return mirror
   }
 
@@ -321,7 +328,7 @@ export class Underline {
     if (!this.underlines.has(element)) return;
     const groups = this.underlines.get(element);
     if (!groups.length) return;
-
+  
     requestAnimationFrame(() => {
       const elementRect = element.getBoundingClientRect();
       const container = this.getFieldContainer(element);
@@ -331,116 +338,116 @@ export class Underline {
       container.style.transform = `translate(${elementRect.left}px, ${elementRect.top}px)`;
       container.style.width = `${element.offsetWidth}px`;
       container.style.height = `${element.offsetHeight}px`;
-
+      container.style.overflow = 'hidden';
+  
       if (element instanceof HTMLTextAreaElement) {
         const mirror = this.createMirrorElement(element);
-        mirror.style.overflow = window.getComputedStyle(element).overflow;
-        mirror.style.height = `${element.offsetHeight}px`;
-
         const textNode = document.createTextNode(currentValue);
-        mirror.replaceChildren(textNode);
+        mirror.appendChild(textNode);
         document.body.appendChild(mirror);
-
-        mirror.scrollTop = element.scrollTop;
-        mirror.scrollLeft = element.scrollLeft;
-        mirror.offsetHeight;
-
-        const mirrorRect = mirror.getBoundingClientRect();
-
+  
+        const elementStyle = window.getComputedStyle(element);
+        const paddingTop = parseFloat(elementStyle.paddingTop);
+        const paddingLeft = parseFloat(elementStyle.paddingLeft);
+  
         groups.forEach((group, groupIndex) => {
           const startIndex = this.findTextPosition(element, group.originalText);
           if (startIndex === -1) {
             toRemove.add(groupIndex);
             return;
           }
-
+  
           const diffStartIndex = startIndex + group.diffInfo.oldStart;
           const diffEndIndex = startIndex + group.diffInfo.oldEnd;
-
-          if (diffStartIndex >= currentValue.length || diffEndIndex > currentValue.length) {
-            toRemove.add(groupIndex);
-            return;
-          }
-
+  
           try {
             const range = document.createRange();
             range.setStart(textNode, diffStartIndex);
             range.setEnd(textNode, diffEndIndex);
-
+  
             const rects = Array.from(range.getClientRects());
             if (rects.length === 0) {
               toRemove.add(groupIndex);
               return;
             }
+  
+            group.underlines.forEach(u => u.remove());
+            group.highlights.forEach(h => h.remove());
+            group.underlines = [];
+            group.highlights = [];
 
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-            rects.forEach((rect, index) => {
-              if (!group.underlines[index]) {
-                toRemove.add(groupIndex);
-                return;
-              }
-
-              const offsetLeft = rect.left - mirrorRect.left;
-              const offsetTop = rect.top - mirrorRect.top;
-
-              group.underlines[index].style.left = `${offsetLeft}px`;
-              group.underlines[index].style.top = `${offsetTop + rect.height - 2}px`;
-              group.underlines[index].style.width = `${rect.width}px`;
-              group.underlines[index].style.transition = 'none';
-
-              if (group.highlights[index]) {
-                group.highlights[index].style.left = `${offsetLeft}px`;
-                group.highlights[index].style.top = `${offsetTop}px`;
-                group.highlights[index].style.width = `${rect.width}px`;
-                group.highlights[index].style.height = `${rect.height}px`;
-                group.highlights[index].style.transition = 'none';
-              }
-
-              const absoluteLeft = elementRect.left + (rect.left - mirrorRect.left);
-              const absoluteTop = elementRect.top + (rect.top - mirrorRect.top);
-              const absoluteRight = elementRect.left + (rect.right - mirrorRect.left);
-              const absoluteBottom = elementRect.top + (rect.bottom - mirrorRect.top);
-
-              if (absoluteLeft < minX) minX = absoluteLeft;
-              if (absoluteTop < minY) minY = absoluteTop;
-              if (absoluteRight > maxX) maxX = absoluteRight;
-              if (absoluteBottom > maxY) maxY = absoluteBottom;
-            });
-
-            if (minX < maxX && minY < maxY) {
-              group.boundingRect = {
-                top: minY,
-                left: minX,
-                right: maxX,
-                bottom: maxY,
-                width: maxX - minX,
-                height: maxY - minY
-              };
-            } else {
-              group.boundingRect = null;
+            let scrollContainer = container.querySelector('.scroll-container');
+            if (!scrollContainer) {
+              scrollContainer = document.createElement('div');
+              scrollContainer.className = 'scroll-container';
+              scrollContainer.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                overflow: hidden;
+              `;
+              container.appendChild(scrollContainer);
             }
+
+            let scrollContent = scrollContainer.querySelector('.scroll-content');
+            if (!scrollContent) {
+              scrollContent = document.createElement('div');
+              scrollContent.className = 'scroll-content';
+              scrollContainer.appendChild(scrollContent);
+            }
+            
+            scrollContent.style.cssText = `
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              transform: translateY(${-element.scrollTop}px);
+            `;
+  
+            rects.forEach((rect, index) => {
+              const offsetLeft = rect.left - mirror.getBoundingClientRect().left;
+              const offsetTop = rect.top - mirror.getBoundingClientRect().top;
+  
+              const highlight = document.createElement('div');
+              highlight.className = 'word-highlight';
+              highlight.style.cssText = `
+                position: absolute;
+                left: ${offsetLeft}px;
+                top: ${offsetTop}px;
+                width: ${rect.width}px;
+                height: ${rect.height}px;
+              `;
+              highlight.dataset.correctionId = group.correctionId;
+              scrollContent.appendChild(highlight);
+              group.highlights.push(highlight);
+  
+              const underline = document.createElement('div');
+              underline.className = 'precise-underline';
+              underline.style.cssText = `
+                position: absolute;
+                left: ${offsetLeft}px;
+                top: ${offsetTop + rect.height - 2}px;
+                width: ${rect.width}px;
+              `;
+              underline.dataset.correctionId = group.correctionId;
+              scrollContent.appendChild(underline);
+              group.underlines.push(underline);
+            });
           } catch (e) {
             toRemove.add(groupIndex);
           }
         });
-
+  
         document.body.removeChild(mirror);
-      }
-
-      Array.from(toRemove).reverse().forEach(index => {
-        const group = groups[index];
-        group.underlines.forEach(underline => underline.remove());
-        group.highlights.forEach(highlight => highlight.remove());
-        groups.splice(index, 1);
-      });
-
-      if (groups.length === 0) {
-        this.underlines.delete(element);
-        if (this.fieldContainers.has(element)) {
-          this.fieldContainers.get(element).remove();
-          this.fieldContainers.delete(element);
-        }
+  
+        Array.from(toRemove).reverse().forEach(index => {
+          const group = groups[index];
+          group.underlines.forEach(underline => underline.remove());
+          group.highlights.forEach(highlight => highlight.remove());
+          groups.splice(index, 1);
+        });
       }
     });
   }
