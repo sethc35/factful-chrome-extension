@@ -238,6 +238,9 @@ export class SlashCommand {
         const filteredCommands = Object.entries(this.slashCommands).filter(([cmd]) =>
             cmd.toLowerCase().includes(filterText.toLowerCase())
         )
+
+        console.log('filtered commands gaming: ', filteredCommands);
+
         filteredCommands.forEach(([cmd, details]) => {
             const option = this.createSlashCommandOption(cmd, details.description)
             this.slashCommandUI.appendChild(option)
@@ -454,7 +457,10 @@ export class SlashCommand {
                 command: command,
                 parameter: parameter
             })
+
+            console.log('response from sending slash command: ', response);
             if (!response || response.error) {
+                console.log('no response from the send command')
                 return null
             }
             if (command === '/synonym' && response.synonyms?.length) {

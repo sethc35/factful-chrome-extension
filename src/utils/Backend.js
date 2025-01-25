@@ -36,10 +36,10 @@ Backend.sendCommand = async function(command, parameter) {
         
         switch (command) {
             case '/synonym':
-                endpoint = 'get-syn';
+                endpoint = 'synonym';
                 break;
             case '/antonym':
-                endpoint = 'get-ant';
+                endpoint = 'antonym';
                 break;
             case '/search':
                 endpoint = 'quick_search';
@@ -51,8 +51,8 @@ Backend.sendCommand = async function(command, parameter) {
 
         // Different URL structure for search
         const url = isSearch 
-            ? `https://backend.factful.io/${endpoint}/${query}`
-            : `https://backend.factful.io/${endpoint}?word=${query}`;
+            ? `http://127.0.0.1:5000/${endpoint}?word=${query}`
+            : `http://127.0.0.1:5000/${endpoint}?word=${query}`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -60,6 +60,8 @@ Backend.sendCommand = async function(command, parameter) {
                 'Content-Type': 'application/json'
             }
         });
+
+        console.log('boomeranged respojnse: ', response)
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
