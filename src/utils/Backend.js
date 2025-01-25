@@ -41,8 +41,8 @@ Backend.sendCommand = async function(command, parameter) {
             case '/antonym':
                 endpoint = 'antonym';
                 break;
-            case '/search':
-                endpoint = 'quick_search';
+            case '/generate':
+                endpoint = 'generate';
                 isSearch = true;
                 break;
             default:
@@ -51,7 +51,7 @@ Backend.sendCommand = async function(command, parameter) {
 
         // Different URL structure for search
         const url = isSearch 
-            ? `http://127.0.0.1:5000/${endpoint}?word=${query}`
+            ? `http://127.0.0.1:5000/${endpoint}?input=${query}`
             : `http://127.0.0.1:5000/${endpoint}?word=${query}`;
 
         const response = await fetch(url, {

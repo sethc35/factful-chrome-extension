@@ -15,8 +15,8 @@ export class SlashCommand {
                     { name: 'word', type: 'text' }
                 ]
             },
-            '/search': {
-                description: 'Search for information',
+            '/generate': {
+                description: 'Generate anything',
                 parameters: [
                     { name: 'word', type: 'text' }
                 ]
@@ -469,8 +469,9 @@ export class SlashCommand {
             if (command === '/antonym' && response.antonyms?.length) {
                 return this.createPopdown(response.antonyms, targetElement)
             }
-            if (command === '/search' && response.search_results?.length) {
-                return this.createPopdown(response.search_results, targetElement)
+            if (command === '/generate' && response.response?.length) {
+                const responseArray = Array.isArray(response.response) ? response.response : [response.response];
+                return this.createPopdown(responseArray, targetElement);
             }
             return null
         } catch {
@@ -479,6 +480,7 @@ export class SlashCommand {
     }
 
     async createPopdown(items, targetElement) {
+        console.log('items received: ', items);
         const popdown = document.createElement('div')
         popdown.style.position = 'fixed'
         popdown.style.backgroundColor = '#fff'

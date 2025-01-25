@@ -51,7 +51,11 @@ function initializeExtension() {
   }, 1000)
 
   function isEditableElement(element) {
-    return element && element.matches('input[type="text"], textarea, [contenteditable="true"]')
+    return element && (element instanceof HTMLTextAreaElement || element.isContentEditable);
+  }
+
+  function getElementText(element) {
+    return element instanceof HTMLTextAreaElement ? element.value : element.textContent;
   }
 
   function getCaretPosition(element) {
@@ -148,40 +152,46 @@ function initializeExtension() {
   }
 
   function handleInput(e) {
-    if (!isEditableElement(e.target)) return
+    if (!isEditableElement(e.target)) return;
     if (activeElement !== e.target) {
-      underline.clearUnderlines(activeElement)
-      activeElement = e.target
+      underline.clearUnderlines(activeElement);
+      activeElement = e.target;
       if (observer) {
-        observer.disconnect()
+        observer.disconnect();
       }
       observer = new MutationObserver(() => {
-        if (!activeElement) return
-        let mutationTimeout = null
-        clearTimeout(mutationTimeout)
+        if (!activeElement) return;
+        let mutationTimeout = null;
+        clearTimeout(mutationTimeout);
         mutationTimeout = setTimeout(() => {
-          debouncedApiUpdate()
-        }, 100)
-      })
-      if (activeElement) {
-        observer.observe(activeElement, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-          attributes: true,
-          attributeFilter: ['style', 'class', 'width', 'height']
-        })
+          debouncedApiUpdate();
+        }, 100);
+      });
+      
+      const observerConfig = {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'width', 'height']
+      };
+      
+      if (activeElement instanceof HTMLTextAreaElement) {
+        observer.observe(activeElement, { attributes: true });
+      } else if (activeElement.isContentEditable) {
+        observer.observe(activeElement, observerConfig);
       }
     }
-    isTyping = true
-    clearTimeout(typeTimeout)
+    
+    isTyping = true;
+    clearTimeout(typeTimeout);
     typeTimeout = setTimeout(() => {
       if (activeElement === e.target) {
-        isTyping = false
-        debouncedApiUpdate()
+        isTyping = false;
+        debouncedApiUpdate();
       }
-    }, 2000)
-    detectSlashCommand(e)
+    }, 2000);
+    detectSlashCommand(e);
   }
 
   document.addEventListener('input', handleInput)
@@ -308,124 +318,122 @@ function initializeExtension() {
   tooltip.getElement().addEventListener('mouseleave', handleMouseLeave)
 
   tooltip.getElement().addEventListener('click', async e => {
-    if (!activeElement || !hoveredUnderline) return
-    const correctionId = hoveredUnderline.dataset.correctionId
+    if (!activeElement || !hoveredUnderline) return;
+    const correctionId = hoveredUnderline.dataset.correctionId;
     const correctionGroup = underline.underlines.get(activeElement)?.find(
       group => group.correctionId === correctionId
-    )
+    );
+    
     if (correctionGroup) {
       try {
         const differences = underline.findTextDifferences(
           correctionGroup.originalText,
           correctionGroup.correctedText
-        )
-        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText)
+        );
+        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText);
+        
         if (startIndex !== -1) {
-          const diffStartIndex = startIndex + differences.oldStart
-          const diffEndIndex = startIndex + differences.oldEnd
-          const hadFocus = document.activeElement === activeElement
+          const diffStartIndex = startIndex + differences.oldStart;
+          const diffEndIndex = startIndex + differences.oldEnd;
+          const hadFocus = document.activeElement === activeElement;
+          
           if (activeElement instanceof HTMLTextAreaElement) {
-            const currentText = activeElement.value
-            const beforeText = currentText.substring(0, diffStartIndex)
-            const afterText = currentText.substring(diffEndIndex)
-            const inputEvent = new InputEvent('input', {
-              bubbles: true,
-              cancelable: true,
-              inputType: 'insertText',
-              data: differences.newDiff
-            })
-            activeElement.value = beforeText + differences.newDiff + afterText
-            activeElement.dispatchEvent(inputEvent)
+            const currentText = activeElement.value;
+            const beforeText = currentText.substring(0, diffStartIndex);
+            const afterText = currentText.substring(diffEndIndex);
+            activeElement.value = beforeText + differences.newDiff + afterText;
+            
             if (hadFocus) {
-              activeElement.focus()
+              activeElement.focus();
               activeElement.setSelectionRange(
                 diffStartIndex + differences.newDiff.length,
                 diffStartIndex + differences.newDiff.length
-              )
+              );
             }
           } else if (activeElement.isContentEditable) {
-            const selection = window.getSelection()
-            const range = document.createRange()
+            const selection = window.getSelection();
+            const range = document.createRange();
+            let textNode = null;
+            
             const walker = document.createTreeWalker(
               activeElement,
               NodeFilter.SHOW_TEXT,
               null,
               false
-            )
-            let currentNode = walker.nextNode()
-            let currentPosition = 0
-            while (currentNode) {
-              const nodeLength = currentNode.length
-              if (currentPosition + nodeLength >= diffStartIndex) {
-                const localStart = diffStartIndex - currentPosition
-                const localEnd = Math.min(diffEndIndex - currentPosition, nodeLength)
-                range.setStart(currentNode, localStart)
-                range.setEnd(currentNode, localEnd)
-                const inputEvent = new InputEvent('input', {
-                  bubbles: true,
-                  cancelable: true,
-                  inputType: 'insertText',
-                  data: differences.newDiff
-                })
-                range.deleteContents()
-                const textNode = document.createTextNode(differences.newDiff)
-                range.insertNode(textNode)
-                activeElement.dispatchEvent(inputEvent)
-                if (hadFocus) {
-                  const newRange = document.createRange()
-                  newRange.setStartAfter(textNode)
-                  newRange.collapse(true)
-                  selection.removeAllRanges()
-                  selection.addRange(newRange)
-                }
-                break
+            );
+            
+            let currentPos = 0;
+            while ((textNode = walker.nextNode()) !== null) {
+              const nodeLength = textNode.length;
+              if (currentPos <= diffStartIndex && diffStartIndex < currentPos + nodeLength) {
+                const localStart = diffStartIndex - currentPos;
+                const localEnd = Math.min(diffEndIndex - currentPos, nodeLength);
+                range.setStart(textNode, localStart);
+                range.setEnd(textNode, localEnd);
+                break;
               }
-              currentPosition += nodeLength
-              currentNode = walker.nextNode()
+              currentPos += nodeLength;
+            }
+            
+            if (textNode) {
+              range.deleteContents();
+              const newTextNode = document.createTextNode(differences.newDiff);
+              range.insertNode(newTextNode);
+              
+              if (hadFocus) {
+                const newRange = document.createRange();
+                newRange.setStartAfter(newTextNode);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              }
             }
           }
+
           correctionGroup.underlines.forEach(underlineEl => {
-            if (underlineEl && underlineEl.parentNode) {
-              underlineEl.style.transform = 'scaleX(0)'
-              underlineEl.style.transformOrigin = 'right'
-              underlineEl.style.transition = 'transform 0.3s ease-in'
-              setTimeout(() => {
-                if (underlineEl.parentNode) {
-                  underlineEl.remove()
-                }
-              }, 300)
+            if (underlineEl?.parentNode) {
+              underlineEl.style.transform = 'scaleX(0)';
+              setTimeout(() => underlineEl.remove(), 300);
             }
-          })
+          });
+          
           correctionGroup.highlights.forEach(highlight => {
-            if (highlight && highlight.parentNode) {
-              highlight.style.opacity = '0'
-              setTimeout(() => {
-                if (highlight.parentNode) {
-                  highlight.remove()
-                }
-              }, 300)
+            if (highlight?.parentNode) {
+              highlight.style.opacity = '0';
+              setTimeout(() => highlight.remove(), 300);
             }
-          })
-          const existingGroups = underline.underlines.get(activeElement)
+          });
+          
+          const existingGroups = underline.underlines.get(activeElement);
           if (existingGroups) {
             const updatedGroups = existingGroups.filter(
               group => group.correctionId !== correctionId
-            )
+            );
             if (updatedGroups.length > 0) {
-              underline.underlines.set(activeElement, updatedGroups)
+              underline.underlines.set(activeElement, updatedGroups);
             } else {
-              underline.underlines.delete(activeElement)
+              underline.underlines.delete(activeElement);
             }
           }
-          tooltip.hideTooltip()
-          underline.removeHoverEffect(activeElement, hoveredUnderline)
-          hoveredUnderline = null
+          
+          tooltip.hideTooltip();
+          underline.removeHoverEffect(activeElement, hoveredUnderline);
+          hoveredUnderline = null;
+
+          const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            inputType: 'insertText',
+            data: differences.newDiff
+          });
+          activeElement.dispatchEvent(inputEvent);
+          
           setTimeout(() => {
-            debouncedApiUpdate()
-          }, 500)
+            debouncedApiUpdate();
+          }, 500);
         }
       } catch (error) {
-        console.log('error clicking tooltip: ', error);
+        console.error('Error applying correction:', error);
       }
     }
   })
