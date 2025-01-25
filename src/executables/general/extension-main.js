@@ -233,66 +233,100 @@ function initializeExtension() {
   })
 
   function handleMouseMove(e) {
-    clearTimeout(tooltipHideTimeout)
-    if (!activeElement) return
-    const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY)
+    clearTimeout(tooltipHideTimeout);
+    if (!activeElement) return;
+    
+    const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY);
     const foundHighlight = Array.from(
       underline.overlay.getElementsByClassName('word-highlight')
     ).find(el => {
-      const rect = el.getBoundingClientRect()
+      const rect = el.getBoundingClientRect();
+      const buffer = 4;
       return (
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top - 4 &&
-        e.clientY <= rect.bottom + 4
-      )
-    })
-    const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'))
+        e.clientX >= rect.left - buffer &&
+        e.clientX <= rect.right + buffer &&
+        e.clientY >= rect.top - buffer &&
+        e.clientY <= rect.bottom + buffer
+      );
+    });
+  
+    const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'));
+    
     if ((foundHighlight || isOverTooltip) && activeElement) {
-      let element
+      let element;
       if (foundHighlight) {
-        const correctionId = foundHighlight.dataset.correctionId
-        const correctionGroup = underline.underlines.get(activeElement)?.filter(
+        const correctionId = foundHighlight.dataset.correctionId;
+        const correctionGroups = underline.underlines.get(activeElement);
+        const correctionGroup = correctionGroups?.find(
           group => group.correctionId === correctionId
-        )
-        element = correctionGroup ? correctionGroup[0] : null
+        );
+        
+        element = correctionGroup || null;
         if (element) {
-          currentHoverElement = element
+          currentHoverElement = element;
+
+          if (activeElement.isContentEditable && !element.boundingRect) {
+            const highlightRect = foundHighlight.getBoundingClientRect();
+            element.boundingRect = {
+              top: highlightRect.top,
+              left: highlightRect.left,
+              right: highlightRect.right,
+              bottom: highlightRect.bottom,
+              width: highlightRect.width,
+              height: highlightRect.height
+            };
+          }
         }
       } else if (isOverTooltip && currentHoverElement) {
-        element = currentHoverElement
+        element = currentHoverElement;
       }
+  
       if (element) {
         if (
           foundHighlight &&
           (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== foundHighlight.dataset.correctionId)
         ) {
           if (hoveredUnderline) {
-            underline.removeHoverEffect(activeElement, hoveredUnderline)
+            underline.removeHoverEffect(activeElement, hoveredUnderline);
           }
-          underline.addHoverEffect(activeElement, foundHighlight)
-          hoveredUnderline = foundHighlight
+          underline.addHoverEffect(activeElement, foundHighlight);
+          hoveredUnderline = foundHighlight;
         }
-        if (element.boundingRect) {
-          tooltip.showTooltip(element.boundingRect, element.errorType, element.correctedText, element.citations)
+
+        if (activeElement.isContentEditable && foundHighlight) {
+          const highlightRect = foundHighlight.getBoundingClientRect();
+          tooltip.showTooltip(
+            highlightRect,
+            element.errorType,
+            element.correctedText,
+            element.citations
+          );
+        } else if (element.boundingRect) {
+          tooltip.showTooltip(
+            element.boundingRect,
+            element.errorType,
+            element.correctedText,
+            element.citations
+          );
         }
       }
     } else {
-      const tooltipBounds = tooltip.getElement().getBoundingClientRect()
+      const tooltipBounds = tooltip.getElement().getBoundingClientRect();
       const isMouseNearTooltip =
         e.clientX >= tooltipBounds.left - 5 &&
         e.clientX <= tooltipBounds.right + 5 &&
         e.clientY >= tooltipBounds.top - 5 &&
-        e.clientY <= tooltipBounds.bottom + 5
+        e.clientY <= tooltipBounds.bottom + 5;
+  
       if (!isMouseNearTooltip) {
         tooltipHideTimeout = setTimeout(() => {
           if (hoveredUnderline) {
-            underline.removeHoverEffect(activeElement, hoveredUnderline)
-            hoveredUnderline = null
+            underline.removeHoverEffect(activeElement, hoveredUnderline);
+            hoveredUnderline = null;
           }
-          currentHoverElement = null
-          tooltip.hideTooltip()
-        }, 100)
+          currentHoverElement = null;
+          tooltip.hideTooltip();
+        }, 100);
       }
     }
   }
