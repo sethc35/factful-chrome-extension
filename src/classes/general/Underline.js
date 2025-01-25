@@ -51,12 +51,13 @@ export class Underline {
         pointer-events: none;
         cursor: text;
         transform-origin: left;
-        will-change: transform, background-color, height;
+        will-change: transform;
         z-index: 1;
         transition: background-color 0.2s ease-out, height 0.2s ease-out;
       }
       .precise-underline-overlay {
         pointer-events: none !important;
+        will-change: transform;
       }
       .precise-underline.hovered {
         background-color: #B01030;
@@ -71,11 +72,26 @@ export class Underline {
         position: absolute;
         pointer-events: auto;
         transition: opacity 0.2s ease-out, background-color 0.2s ease-out;
-        transform: translateZ(0);
         will-change: transform, opacity;
         opacity: 0;
         z-index: 0;
         background-color: rgba(255, 99, 71, 0.1);
+      }
+      .scroll-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        will-change: transform;
+      }
+      .scroll-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        will-change: transform;
       }
       .precise-underline.hovered ~ .word-highlight {
         opacity: 0.7;
@@ -234,7 +250,7 @@ export class Underline {
       const container = this.getFieldContainer(element);
       const elementRect = element.getBoundingClientRect();
 
-      container.style.transform = `translate(${elementRect.left}px, ${elementRect.top}px)`;
+      container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`;
       container.style.width = `${element.offsetWidth}px`;
       container.style.height = `${element.offsetHeight}px`;
 
@@ -335,7 +351,7 @@ export class Underline {
       const currentValue = element.value || element.textContent || '';
       const toRemove = new Set();
 
-      container.style.transform = `translate(${elementRect.left}px, ${elementRect.top}px)`;
+      container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`;
       container.style.width = `${element.offsetWidth}px`;
       container.style.height = `${element.offsetHeight}px`;
       container.style.overflow = 'hidden';
@@ -405,6 +421,7 @@ export class Underline {
               right: 0;
               transform: translateY(${-element.scrollTop}px);
             `;
+            scrollContent.style.transform = `translate3d(0, ${-element.scrollTop}px, 0)`;
   
             rects.forEach((rect, index) => {
               const offsetLeft = rect.left - mirror.getBoundingClientRect().left;
