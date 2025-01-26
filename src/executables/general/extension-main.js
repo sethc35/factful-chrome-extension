@@ -43,7 +43,6 @@ function initializeExtension() {
   const debouncedApiUpdate = debounce(async () => {
     if (!isTyping && activeElement) {
       const apiData = await fetchDataFromBackend(activeElement)
-      console.log('api data fetched from backend: ', apiData);
       if (apiData && apiData.corrections) {
         underline.updateUnderlines(activeElement, apiData.corrections, true)
       }
@@ -52,10 +51,6 @@ function initializeExtension() {
 
   function isEditableElement(element) {
     return element && (element instanceof HTMLTextAreaElement || element.isContentEditable);
-  }
-
-  function getElementText(element) {
-    return element instanceof HTMLTextAreaElement ? element.value : element.textContent;
   }
 
   function getCaretPosition(element) {
@@ -74,58 +69,57 @@ function initializeExtension() {
     return null
   }
 
-  function getCursorRect(element, slashIndex) {
+  function getCursorRect(element, position) {
     if (element instanceof HTMLTextAreaElement) {
-      const mirror = document.createElement('div')
-      const computedStyle = window.getComputedStyle(element)
-      for (const key of computedStyle) {
-        mirror.style[key] = computedStyle[key]
-      }
-      mirror.style.position = 'absolute'
-      mirror.style.visibility = 'hidden'
-      mirror.style.whiteSpace = 'pre-wrap'
-      mirror.style.wordWrap = 'break-word'
-      mirror.style.overflow = 'hidden'
-      mirror.style.width = element.offsetWidth + 'px'
-      const textBeforeSlash = element.value.substring(0, slashIndex + 1)
-      mirror.textContent = textBeforeSlash
-      const measureSpan = document.createElement('span')
-      measureSpan.textContent = '|'
-      mirror.appendChild(measureSpan)
-      document.body.appendChild(mirror)
-      const elementRect = element.getBoundingClientRect()
-      const spanRect = measureSpan.getBoundingClientRect()
-      const mirrorRect = mirror.getBoundingClientRect()
-      const coords = {
-        left: elementRect.left + (spanRect.left - mirrorRect.left),
-        bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
-      }
-      document.body.removeChild(mirror)
-      return coords
-    } else if (element.isContentEditable) {
-      const selection = window.getSelection()
-      if (!selection.rangeCount) return null
-      const range = document.createRange()
-      let node = element
-      let charCount = 0
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
-      while (node == walker.nextNode()) {
-        const nodeLength = node.textContent.length
-        if (charCount + nodeLength >= slashIndex) {
-          const offset = slashIndex - charCount
-          range.setStart(node, offset)
-          range.setEnd(node, offset + 1)
-          break
+        // Restore original textarea positioning
+        const mirror = document.createElement('div');
+        const computedStyle = window.getComputedStyle(element);
+        for (const key of computedStyle) {
+            mirror.style[key] = computedStyle[key];
         }
-        charCount += nodeLength
-      }
-      const rect = range.getBoundingClientRect()
-      return {
-        left: rect.left,
-        bottom: rect.bottom
-      }
+        mirror.style.position = 'absolute';
+        mirror.style.visibility = 'hidden';
+        mirror.style.whiteSpace = 'pre-wrap';
+        mirror.style.wordWrap = 'break-word';
+        mirror.style.overflow = 'hidden';
+        mirror.style.width = element.offsetWidth + 'px';
+        const textBeforeSlash = element.value.substring(0, position + 1);
+        mirror.textContent = textBeforeSlash;
+        const measureSpan = document.createElement('span');
+        measureSpan.textContent = '|';
+        mirror.appendChild(measureSpan);
+        document.body.appendChild(mirror);
+        const elementRect = element.getBoundingClientRect();
+        const spanRect = measureSpan.getBoundingClientRect();
+        const mirrorRect = mirror.getBoundingClientRect();
+        const coords = {
+            left: elementRect.left + (spanRect.left - mirrorRect.left),
+            top: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height,
+            bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
+        };
+        document.body.removeChild(mirror);
+        return coords;
+    } else if (element.isContentEditable) {
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return null;
+        const range = sel.getRangeAt(0).cloneRange();
+        range.collapse(true);
+        const span = document.createElement('span');
+        span.textContent = '\u200b';
+        span.style.position = 'absolute';
+        span.style.opacity = '0';
+        range.insertNode(span);
+        const rect = span.getBoundingClientRect();
+        const elementStyles = window.getComputedStyle(element);
+        const paddingLeft = parseFloat(elementStyles.paddingLeft) || 0;
+        span.remove();
+        return {
+            left: rect.left - paddingLeft,
+            top: rect.top,
+            bottom: rect.bottom
+        };
     }
-    return null
+    return null;
   }
 
   function detectSlashCommand(e) {
@@ -140,7 +134,7 @@ function initializeExtension() {
         const rect = getCursorRect(activeElement, slashIndex)
         slashCommand.currentInput = typedCommand
         slashCommand.showSlashCommands(
-          { left: rect.left, top: 0, bottom: rect.bottom, right: rect.left },
+          { left: rect.left, top: rect.top, bottom: rect.bottom },
           typedCommand
         )
       } else {
@@ -217,7 +211,7 @@ function initializeExtension() {
         slashCommand.updateSelectedIndex(1)
         e.preventDefault()
       } else if (e.key === 'Enter') {
-        const selectedOption = slashCommand.getSlashCommandUI().children[
+        const selectedOption = slashCommand.slashCommandUI.children[
           slashCommand.selectedIndex
         ]
         if (selectedOption) {

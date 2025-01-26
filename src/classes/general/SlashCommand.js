@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 
 export class SlashCommand {
     constructor() {
@@ -28,6 +29,7 @@ export class SlashCommand {
         this.slashCommandUI = null
         this.parameterUI = null
         this.lastFocusedElement = null
+        this.originalRange = null;
         this.addStyles()
         this.createSlashCommandUI()
         this.createParameterUI()
@@ -137,45 +139,69 @@ export class SlashCommand {
 
     getCursorCoordinates(element, position) {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-            const mirror = document.createElement('div')
-            const computedStyle = window.getComputedStyle(element)
-            for (const key of computedStyle) {
-                mirror.style[key] = computedStyle[key]
-            }
-            mirror.style.position = 'absolute'
-            mirror.style.visibility = 'hidden'
-            mirror.style.whiteSpace = 'pre-wrap'
-            mirror.style.wordWrap = 'break-word'
-            mirror.style.overflow = 'hidden'
-            mirror.style.width = element.offsetWidth + 'px'
-            const text = element.value.substring(0, position)
-            mirror.textContent = text
-            const marker = document.createElement('span')
-            marker.textContent = '|'
-            mirror.appendChild(marker)
-            document.body.appendChild(mirror)
-            const markerRect = marker.getBoundingClientRect()
-            const mirrorRect = mirror.getBoundingClientRect()
-            const elementRect = element.getBoundingClientRect()
+            const mirror = document.createElement('div');
+            const computedStyle = window.getComputedStyle(element);
+            
+            mirror.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                overflow: hidden;
+                width: ${element.offsetWidth}px;
+                height: ${element.offsetHeight}px;
+                font: ${computedStyle.font};
+                padding: ${computedStyle.padding};
+                border: ${computedStyle.border};
+                line-height: ${computedStyle.lineHeight};
+            `;
+    
+            const text = element.value.substring(0, position);
+            mirror.textContent = text.replace(/\n$/, '\n\u200b');
+    
+            const marker = document.createElement('span');
+            marker.textContent = '|';
+            mirror.appendChild(marker);
+            document.body.appendChild(mirror);
+    
+            const markerRect = marker.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
             const coords = {
-                left: elementRect.left + (markerRect.left - mirrorRect.left),
-                top: elementRect.top + (markerRect.top - mirrorRect.top)
-            }
-            console.log('coords: ', coords);
-            document.body.removeChild(mirror)
-            return coords
-        } else if (element.isContentEditable) {
-            const selection = window.getSelection()
-            if (selection.rangeCount === 0) return null
-            const range = selection.getRangeAt(0).cloneRange()
-            range.collapse(true)
-            const rect = range.getBoundingClientRect()
-            return {
-                left: rect.left,
-                top: rect.top
-            }
+                left: elementRect.left + (markerRect.left - mirror.getBoundingClientRect().left),
+                top: elementRect.top + (markerRect.top - mirror.getBoundingClientRect().top)
+            };
+    
+            document.body.removeChild(mirror);
+            return coords;
+        } 
+        else if (element.isContentEditable) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return null;
+
+            const marker = document.createElement('span');
+            marker.innerHTML = '&#feff;';  // Zero-width space
+            const range = selection.getRangeAt(0).cloneRange();
+            range.collapse(true);
+            range.insertNode(marker);
+
+            const rect = marker.getBoundingClientRect();
+            const computed = window.getComputedStyle(element);
+
+            const scrollX = window.scrollX || window.pageXOffset;
+            const scrollY = window.scrollY || window.pageYOffset;
+
+            const containerRect = element.getBoundingClientRect();
+            const left = rect.left + scrollX - containerRect.left;
+            const top = rect.top + scrollY - containerRect.top;
+
+            marker.parentNode?.removeChild(marker);
+    
+            return { 
+                left: left + parseInt(computed.paddingLeft),
+                top: top + parseInt(computed.paddingTop)
+            };
         }
-        return null
+        return null;
     }
 
     getCaretPosition(element) {
@@ -239,8 +265,6 @@ export class SlashCommand {
             cmd.toLowerCase().includes(filterText.toLowerCase())
         )
 
-        console.log('filtered commands gaming: ', filteredCommands);
-
         filteredCommands.forEach(([cmd, details]) => {
             const option = this.createSlashCommandOption(cmd, details.description)
             this.slashCommandUI.appendChild(option)
@@ -284,8 +308,30 @@ export class SlashCommand {
     }
 
     selectCommand(command) {
-        this.insertCommandBadge(command)
-        this.hideSlashCommandUI()
+        const popdownRect = this.slashCommandUI.getBoundingClientRect();
+        this.lastPopdownPosition = {
+            left: popdownRect.left,
+            top: popdownRect.top,
+            width: popdownRect.width
+        };
+
+        const element = this.lastFocusedElement || document.activeElement;
+        this.originalRange = null;
+    
+        if (element.isContentEditable) {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                this.originalRange = sel.getRangeAt(0).cloneRange();
+            }
+        } else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+            this.originalRange = {
+                start: element.selectionStart,
+                end: element.selectionEnd
+            };
+        }
+    
+        this.insertCommandBadge(command);
+        this.hideSlashCommandUI();
     }
 
     createSlashCommandOption(command, description) {
@@ -360,14 +406,13 @@ export class SlashCommand {
             document.body.appendChild(overlayContainer)
         }
         overlayContainer.appendChild(badge)
-    
-        const caretInfo = this.getCursorPosition(element)
-        if (caretInfo && caretInfo.position !== null) {
-            const coords = this.getCursorCoordinates(element, caretInfo.position)
-            if (coords) {
-                badge.style.left = coords.left + 'px'
-                badge.style.top = coords.top + 'px'
-            }
+
+        if (this.lastPopdownPosition) {
+            const badgeHeight = 20;
+            const verticalOffset = -badgeHeight - 2;
+            
+            badge.style.left = `${this.lastPopdownPosition.left}px`;
+            badge.style.top = `${this.lastPopdownPosition.top + verticalOffset}px`;
         }
     
         requestAnimationFrame(() => {
@@ -458,9 +503,7 @@ export class SlashCommand {
                 parameter: parameter
             })
 
-            console.log('response from sending slash command: ', response);
             if (!response || response.error) {
-                console.log('no response from the send command')
                 return null
             }
             if (command === '/synonym' && response.synonyms?.length) {
@@ -480,84 +523,114 @@ export class SlashCommand {
     }
 
     async createPopdown(items, targetElement) {
-        console.log('items received: ', items);
-        const popdown = document.createElement('div')
-        popdown.style.position = 'fixed'
-        popdown.style.backgroundColor = '#fff'
-        popdown.style.border = '1px solid #e0e0e0'
-        popdown.style.borderRadius = '8px'
-        popdown.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
-        popdown.style.padding = '8px'
-        popdown.style.zIndex = '9999999'
-        popdown.style.display = 'flex'
-        popdown.style.flexDirection = 'column'
-        popdown.style.gap = '4px'
-        const caretPos = this.getCaretPosition(targetElement)
-        const coords = caretPos && this.getCursorCoordinates(targetElement, caretPos.position)
-        popdown.style.left = coords ? coords.left + 'px' : '100px'
-        popdown.style.top = coords ? coords.top + 20 + 'px' : '120px'
-        let isProcessing = false
+        const popdown = document.createElement('div');
+        popdown.style.position = 'fixed';
+        popdown.style.backgroundColor = '#fff';
+        popdown.style.border = '1px solid #e0e0e0';
+        popdown.style.borderRadius = '8px';
+        popdown.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        popdown.style.padding = '8px';
+        popdown.style.zIndex = '9999999';
+        popdown.style.display = 'flex';
+        popdown.style.flexDirection = 'column';
+        popdown.style.gap = '4px';
+    
+        const badgeRect = this.lastPopdownPosition;
+        const viewportHeight = window.innerHeight;
+        const verticalOffset = 10;
+    
+        popdown.style.left = `${badgeRect.left}px`;
+        popdown.style.top = `${badgeRect.top + verticalOffset}px`;
+    
+        let isProcessing = false;
+    
         items.forEach(item => {
-            const btn = document.createElement('button')
-            btn.textContent = item
-            btn.style.padding = '8px 12px'
-            btn.style.border = 'none'
-            btn.style.borderRadius = '4px'
-            btn.style.backgroundColor = '#f3f4f6'
-            btn.style.cursor = 'pointer'
-            btn.style.width = '100%'
-            btn.style.textAlign = 'left'
-            btn.style.color = '#374151'
-            btn.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif"
-            btn.style.fontSize = '14px'
+            const btn = document.createElement('button');
+            btn.textContent = item;
+            btn.style.padding = '8px 12px';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '4px';
+            btn.style.backgroundColor = '#f3f4f6';
+            btn.style.cursor = 'pointer';
+            btn.style.width = '100%';
+            btn.style.textAlign = 'left';
+            btn.style.color = '#374151';
+            btn.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif";
+            btn.style.fontSize = '14px';
+    
             btn.addEventListener('mouseover', () => {
-                btn.style.backgroundColor = '#e5e7eb'
-            })
+                btn.style.backgroundColor = '#e5e7eb';
+            });
+    
             btn.addEventListener('mouseout', () => {
-                btn.style.backgroundColor = '#f3f4f6'
-            })
+                btn.style.backgroundColor = '#f3f4f6';
+            });
+    
             btn.addEventListener('click', (e) => {
-                e.preventDefault()
-                if (isProcessing) return
-                isProcessing = true
-                if (popdown.parentNode) popdown.parentNode.removeChild(popdown)
-                if (targetElement) {
-                    targetElement.focus()
-                    if (targetElement instanceof HTMLTextAreaElement || targetElement instanceof HTMLInputElement) {
-                        const start = targetElement.selectionStart
-                        const end = targetElement.selectionEnd
-                        if (start != null && end != null) {
-                            const before = targetElement.value.slice(0, start)
-                            const after = targetElement.value.slice(end)
-                            targetElement.value = before + item + after
-                            const newPos = before.length + item.length
-                            targetElement.setSelectionRange(newPos, newPos)
+                e.preventDefault();
+                if (isProcessing) return;
+                isProcessing = true;
+            
+                popdown.remove();
+                document.removeEventListener('mousedown', handleOutside);
+            
+                const element = this.lastFocusedElement || document.activeElement;
+                if (!element) return;
+
+                element.focus();
+            
+                requestAnimationFrame(() => {
+                    try {
+                        if (element.isContentEditable) {
+                            const sel = window.getSelection();
+                            let range = null;
+            
+                            if (sel.rangeCount > 0) {
+                                range = sel.getRangeAt(0);
+                            } else {
+                                range = document.createRange();
+                                range.selectNodeContents(element);
+                                range.collapse(false);
+                                sel.addRange(range);
+                            }
+
+                            const textNode = document.createTextNode(item + ' ');
+                            range.deleteContents();
+                            range.insertNode(textNode);
+
+                            const newRange = document.createRange();
+                            newRange.setStartAfter(textNode);
+                            newRange.collapse(true);
+                            sel.removeAllRanges();
+                            sel.addRange(newRange);
+                        } else {
+                            const start = element.selectionStart;
+                            element.setRangeText(item, start, start, 'end');
                         }
-                    } else if (targetElement.isContentEditable) {
-                        const selection = window.getSelection()
-                        if (selection.rangeCount > 0) {
-                            const range = selection.getRangeAt(0)
-                            range.deleteContents()
-                            const textNode = document.createTextNode(item)
-                            range.insertNode(textNode)
-                            range.setStartAfter(textNode)
-                            range.setEndAfter(textNode)
-                            selection.removeAllRanges()
-                            selection.addRange(range)
-                        }
+
+                        element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                    } catch (error) {
+                        element.textContent += item + ' ';
                     }
-                    targetElement.dispatchEvent(new Event('input', { bubbles: true }))
-                }
-            })
-            popdown.appendChild(btn)
-        })
-        document.body.appendChild(popdown)
+            
+                    setTimeout(() => {
+                        element.focus();
+                        isProcessing = false;
+                    }, 50);
+                });
+            });                 
+    
+            popdown.appendChild(btn);
+        });
+    
+        document.body.appendChild(popdown);
+    
         const handleOutside = (e) => {
             if (!popdown.contains(e.target)) {
-                popdown.remove()
-                document.removeEventListener('mousedown', handleOutside)
+                popdown.remove();
+                document.removeEventListener('mousedown', handleOutside);
             }
-        }
-        document.addEventListener('mousedown', handleOutside)
+        };
+        document.addEventListener('mousedown', handleOutside);
     }
 }
