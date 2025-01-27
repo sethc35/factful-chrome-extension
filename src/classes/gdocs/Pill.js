@@ -1,8 +1,9 @@
 export class Pill {
-  constructor(numCorrections, corrections) {
+  constructor(numCorrections, corrections, handlers) {
       this.numCorrections = numCorrections;
       this.corrections = corrections || [];
       this.pillElement = null;
+      this.handlers = handlers;
       this.createPillElement();
       this.applyInitialStyles();
       this.attachEventListeners();
@@ -127,29 +128,68 @@ export class Pill {
     container.className = 'correction-container';
     container.setAttribute('data-type', correction.error_type.toLowerCase());
 
-    // Create error type label
     const typeLabel = document.createElement('div');
     typeLabel.className = 'correction-type';
     typeLabel.textContent = correction.error_type;
     container.appendChild(typeLabel);
 
-    // Create instruction text
     const instruction = document.createElement('div');
     instruction.className = 'correction-instruction';
     instruction.textContent = 'Correct your text to:';
     container.appendChild(instruction);
 
-    // Create corrected text
     const correctedText = document.createElement('div');
     correctedText.className = 'correction-text';
     correctedText.textContent = correction.corrected_text;
     container.appendChild(correctedText);
 
-    // Create accept button
     const acceptButton = document.createElement('button');
     acceptButton.className = 'correction-accept-button';
     acceptButton.textContent = 'Accept';
     container.appendChild(acceptButton);
+
+    acceptButton.addEventListener('click', async () => {
+        try {
+            await this.handlers.handleCorrection(correction);
+            container.style.opacity = '0';
+            setTimeout(() => {
+                container.remove();
+            }, 100);
+        } catch (error) {
+            console.error('Error during correction acceptance:', error);
+        }
+    });
+
+    container.addEventListener('mouseenter', () => {
+        const underlineElements = document.querySelectorAll('[data-enhanced-text-tracker="underline-element"]');
+        underlineElements.forEach(el => {
+            const line = el.querySelector('line');
+            const highlightRect = el.querySelector('rect');
+            
+            if (el.getAttribute('data-original-text') === correction.originalText &&
+                el.getAttribute('data-error-type') === correction.error_type) {
+                highlightRect.setAttribute('fill', correction.error_type === 'Grammar' 
+                    ? 'rgba(255, 99, 71, 0.7)' 
+                    : 'rgba(173, 216, 230, 0.7)');
+                line.setAttribute('stroke-width', '3');
+                line.setAttribute('stroke-opacity', '1');
+                line.setAttribute('stroke', correction.error_type === 'Grammar' ? '#B01030' : '#003C6B');
+            }
+        });
+    });
+
+    container.addEventListener('mouseleave', () => {
+        const underlineElements = document.querySelectorAll('[data-enhanced-text-tracker="underline-element"]');
+        underlineElements.forEach(el => {
+            const line = el.querySelector('line');
+            const highlightRect = el.querySelector('rect');
+            
+            highlightRect.setAttribute('fill', 'rgba(0, 0, 0, 0)');
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('stroke-opacity', '0.8');
+            line.setAttribute('stroke', correction.error_type === 'Grammar' ? '#FF6347' : '#4682B4');
+        });
+    });
 
     return container;
   }

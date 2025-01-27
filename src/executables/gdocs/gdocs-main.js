@@ -51,7 +51,79 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
-    const singlePill = new Pill(corrections.length, corrections);
+
+    const singlePill = new Pill(corrections.length, corrections, {
+      findTextDifferences: Underline.findTextDifferences,
+      getUnderlineElements: () => underline.underlineElements,
+      handleCorrection: async (correction) => {
+          try {
+              const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
+              const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
+              
+              // Find the matching underline element from the underline instance
+              const matchingUnderline = underline.underlineElements.find(el => 
+                  el.originalText === correction.originalText && 
+                  el.error_type === correction.error_type
+              );
+  
+              if (!matchingUnderline) {
+                  console.error('No matching underline found for correction');
+                  return;
+              }
+  
+              // Get the first element's line for coordinates
+              const line = matchingUnderline.groupElement.querySelector('line');
+              const svgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
+              const x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
+              const x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
+              const y = svgRect.top + parseFloat(line.getAttribute('y1'));
+  
+              // Simulate text selection
+              const tileManager = document.querySelector('.kix-rotatingtilemanager-content');
+              tileManager.dispatchEvent(new MouseEvent('mousedown', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x1,
+                  clientY: y
+              }));
+              tileManager.dispatchEvent(new MouseEvent('mousemove', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x2,
+                  clientY: y
+              }));
+              tileManager.dispatchEvent(new MouseEvent('mouseup', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x2,
+                  clientY: y
+              }));
+  
+              // Wait for selection to register
+              await new Promise(r => setTimeout(r, 50));
+              document.execCommand('delete');
+              await new Promise(r => setTimeout(r, 50));
+  
+              // Calculate and apply the correction
+              const differences = Underline.findTextDifferences(
+                  correction.originalText,
+                  correction.corrected_text
+              );
+  
+              const clipboardData = new DataTransfer();
+              clipboardData.setData('text/plain', differences.newDiff);
+              contentDiv.dispatchEvent(new ClipboardEvent('paste', {
+                  bubbles: true,
+                  cancelable: true,
+                  clipboardData
+              }));
+  
+          } catch (error) {
+              console.error('Error in handleCorrection:', error);
+              throw error;
+          }
+      }
+    });
 
     setupSlashListeners();
     observeDocChanges();
@@ -123,7 +195,7 @@ export function initializeGDocsTracker() {
         underline.applyUnderlines(newCorrections, true);
         corrections = newCorrections;
         singlePill.updateCorrections(corrections.length, corrections);
-      }, 2000);
+      }, 1000);
 
       async function reapplyUnderlines(animate = false) {
         const docText = await ApiService.collectTextFromRects();

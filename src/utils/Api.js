@@ -50,6 +50,7 @@ export class ApiService {
   static async fetchDataFromApi() {
     try {
       const textContent = await ApiService.collectTextFromRects()
+      console.log('fetching data now!')
       const query = encodeURIComponent(textContent)
       const response = await fetch(
         `https://backend.factful.io/process_text?input=${query}`,
@@ -64,6 +65,7 @@ export class ApiService {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
+      console.log('get back: ', data);
       return data || {}
     } catch (error) {
       return { error: error.message }
