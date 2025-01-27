@@ -328,7 +328,6 @@ export class Underline {
       }
     })
 
-    // If your code updates a pill UI
     if (typeof updateAllPills === "function") {
       updateAllPills(corrections.length)
     }

@@ -51,7 +51,7 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
-    const singlePill = new Pill(corrections.length);
+    const singlePill = new Pill(corrections.length, corrections);
 
     setupSlashListeners();
     observeDocChanges();
@@ -122,7 +122,7 @@ export function initializeGDocsTracker() {
         underline.buildRectCharIndexMapping();
         underline.applyUnderlines(newCorrections, true);
         corrections = newCorrections;
-        singlePill.updateCorrections(corrections.length);
+        singlePill.updateCorrections(corrections.length, corrections);
       }, 2000);
 
       async function reapplyUnderlines(animate = false) {
@@ -134,7 +134,7 @@ export function initializeGDocsTracker() {
         corrections = newCorrections;
         underline.buildRectCharIndexMapping();
         underline.applyUnderlines(corrections, shouldAnimate);
-        singlePill.updateCorrections(corrections.length);
+        singlePill.updateCorrections(corrections.length, corrections);
       }
 
       const observer = new MutationObserver(mutations => {
