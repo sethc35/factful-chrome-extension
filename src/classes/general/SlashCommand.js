@@ -502,7 +502,6 @@ export class SlashCommand {
                 command: command,
                 parameter: parameter
             })
-
             if (!response || response.error) {
                 return null
             }
@@ -512,9 +511,8 @@ export class SlashCommand {
             if (command === '/antonym' && response.antonyms?.length) {
                 return this.createPopdown(response.antonyms, targetElement)
             }
-            if (command === '/generate' && response.response?.length) {
-                const responseArray = Array.isArray(response.response) ? response.response : [response.response];
-                return this.createPopdown(responseArray, targetElement);
+            if (command === '/search' && response.search_results?.length) {
+                return this.createPopdown(response.search_results, targetElement)
             }
             return null
         } catch {

@@ -5,14 +5,12 @@ var Backend = Backend || {};
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
-        const response = await fetch(`http://127.0.0.1:5000/process_text?input=${query}`, {
+        const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
-
-        console.log('backend response: ', response);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -36,13 +34,13 @@ Backend.sendCommand = async function(command, parameter) {
         
         switch (command) {
             case '/synonym':
-                endpoint = 'synonym';
+                endpoint = 'get-syn';
                 break;
             case '/antonym':
-                endpoint = 'antonym';
+                endpoint = 'get-ant';
                 break;
-            case '/generate':
-                endpoint = 'generate';
+            case '/search':
+                endpoint = 'quick_search';
                 isSearch = true;
                 break;
             default:
@@ -51,8 +49,8 @@ Backend.sendCommand = async function(command, parameter) {
 
         // Different URL structure for search
         const url = isSearch 
-            ? `http://127.0.0.1:5000/${endpoint}?input=${query}`
-            : `http://127.0.0.1:5000/${endpoint}?word=${query}`;
+            ? `https://backend.factful.io/${endpoint}/${query}`
+            : `https://backend.factful.io/${endpoint}?word=${query}`;
 
         const response = await fetch(url, {
             method: 'GET',
@@ -60,8 +58,6 @@ Backend.sendCommand = async function(command, parameter) {
                 'Content-Type': 'application/json'
             }
         });
-
-        console.log('boomeranged respojnse: ', response)
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
