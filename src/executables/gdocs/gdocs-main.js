@@ -51,7 +51,113 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
-    const singlePill = new Pill(corrections.length);
+
+    const singlePill = new Pill(corrections.length, corrections, {
+      findTextDifferences: Underline.findTextDifferences,
+      getUnderlineElements: () => underline.underlineElements,
+      handleCorrection: async (correction) => {
+          try {
+              const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
+              const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
+
+              const matchingUnderline = underline.underlineElements.find(el => 
+                  el.originalText === correction.originalText && 
+                  el.error_type === correction.error_type
+              );
+  
+              if (!matchingUnderline) {
+                  console.error('No matching underline found for correction');
+                  return;
+              }
+
+              const line = matchingUnderline.groupElement.querySelector('line');
+              const svgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
+              const x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
+              const x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
+              const y = svgRect.top + parseFloat(line.getAttribute('y1'));
+
+              const tileManager = document.querySelector('.kix-rotatingtilemanager-content');
+              tileManager.dispatchEvent(new MouseEvent('mousedown', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x1,
+                  clientY: y
+              }));
+              tileManager.dispatchEvent(new MouseEvent('mousemove', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x2,
+                  clientY: y
+              }));
+              tileManager.dispatchEvent(new MouseEvent('mouseup', {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: x2,
+                  clientY: y
+              }));
+
+              await new Promise(r => setTimeout(r, 50));
+              document.execCommand('delete');
+              await new Promise(r => setTimeout(r, 50));
+
+              const differences = Underline.findTextDifferences(
+                  correction.originalText,
+                  correction.corrected_text
+              );
+  
+              const clipboardData = new DataTransfer();
+              clipboardData.setData('text/plain', differences.newDiff);
+              contentDiv.dispatchEvent(new ClipboardEvent('paste', {
+                  bubbles: true,
+                  cancelable: true,
+                  clipboardData
+              }));
+  
+          } catch (error) {
+              console.error('Error in handleCorrection:', error);
+              throw error;
+          }
+      },
+      handleHighlight: (correction, isHovering) => {
+        const matchingUnderlines = underline.underlineElements.filter(el => 
+            el.originalText === correction.originalText && 
+            el.error_type === correction.error_type
+        );
+
+        matchingUnderlines.forEach(el => {
+            const groupElement = el.groupElement;
+            const highlightRect = groupElement.querySelector('rect');
+            const line = groupElement.querySelector('line');
+
+            if (isHovering) {
+                const hoverColor = el.error_type === 'Grammar' 
+                    ? 'rgba(255, 99, 71, 0.7)' 
+                    : 'rgba(173, 216, 230, 0.7)';
+
+                highlightRect.setAttribute('fill', hoverColor);
+                line.setAttribute('stroke-width', '3');
+                line.setAttribute('stroke-opacity', '1');
+                line.setAttribute('stroke', el.error_type === 'Grammar' 
+                    ? '#B01030' 
+                    : '#003C6B'
+                );
+
+                el.isHovered = true;
+            } else {
+                highlightRect.setAttribute('fill', el.defaultColor);
+                
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('stroke-opacity', '0.8');
+                line.setAttribute('stroke', el.error_type === 'Grammar' 
+                    ? '#FF6347' 
+                    : '#4682B4'
+                );
+
+                el.isHovered = false;
+            }
+        });
+      }
+    });
 
     setupSlashListeners();
     observeDocChanges();
@@ -122,8 +228,8 @@ export function initializeGDocsTracker() {
         underline.buildRectCharIndexMapping();
         underline.applyUnderlines(newCorrections, true);
         corrections = newCorrections;
-        singlePill.updateCorrections(corrections.length);
-      }, 2000);
+        singlePill.updateCorrections(corrections.length, corrections);
+      }, 1000);
 
       async function reapplyUnderlines(animate = false) {
         const docText = await ApiService.collectTextFromRects();
@@ -134,7 +240,7 @@ export function initializeGDocsTracker() {
         corrections = newCorrections;
         underline.buildRectCharIndexMapping();
         underline.applyUnderlines(corrections, shouldAnimate);
-        singlePill.updateCorrections(corrections.length);
+        singlePill.updateCorrections(corrections.length, corrections);
       }
 
       const observer = new MutationObserver(mutations => {

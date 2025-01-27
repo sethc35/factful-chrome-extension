@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Panel</title>
+    <link href="panel.css" rel="stylesheet">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="suggestions">
+                <div class="tab-icon active">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <span>Suggestions</span>
+            </button>
+            <button class="tab-button" data-tab="enhancements">
+                <div class="tab-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <span>Enhancements</span>
+            </button>
+            <button class="tab-button" data-tab="commands">
+                <div class="tab-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                </div>
+                <span>Commands</span>
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="tab-content" id="suggestions">
+                <div draggable="false" class="dontselect flex flex-col relative" id="suggestions-sidebar">
+                    <div id="suggestions-sidebar-container-2">
+                        <div id="correction-type-container" style="font-family: Inter, sans-serif">
+                            <div id="all-corrections" class="correction-button selected">
+                                <span>All</span>
+                                <span class="corrections-counter" style="font-family: Inter, sans-serif" >0</span>
+                            </div>
+
+                            <div id="grammar-corrections" class="correction-button">
+                                <span>Grammar</span>
+                                <span class="corrections-counter" style="font-family: Inter, sans-serif">0</span>
+                            </div>
+                            
+                            <div id="factuality-corrections" class="correction-button">
+                                <span>Factuality</span>
+                                <span class="corrections-counter" style="font-family: Inter, sans-serif">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="suggestions-sidebar-not-found" style="">
+                        <img src="/assets/BluePlaceholderImage.png" id="placeholder-image" draggable="false">
+                        <div class="font-roboto" style="font-size: 0.75rem"><b>Nothing to be fact checked yet.</b><br>Start writing or upload a document to see Factful's feedback.</div>
+                    </div>
+
+                    <div id="suggestions-sidebar-container-1" class="flex flex-col relative items-center justify-start max-w-[100%]" style="overflow-y: scroll; overflow-x: visible; scrollbar-width: none"></div>
+                </div>
+            </div>
+
+            <div class="tab-content hidden" id="enhancements">
+                <div class="section">
+                    <h3 class="section-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        Quick Actions
+                    </h3>
+                    <p class="section-subtitle">Select text to apply changes.</p>
+                    <div class="quick-actions-grid">
+                        <button class="quick-action-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+                            <span>Paraphrase</span>
+                        </button>
+                        <button class="quick-action-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <span>Summarize</span>
+                        </button>
+                        <button class="quick-action-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m19 16-6-6"/><path d="m20 10-6 6-2 3"/><path d="M22 19H10"/><path d="M17 22h-1"/></svg>
+                            <span>Translate</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3 class="section-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        Research
+                    </h3>
+                    <p class="section-subtitle">Search for anything on the web.</p>
+                    <div class="search-container">
+                        <input type="text" placeholder="How long was the Queen's rule?" class="search-input">
+                        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content hidden" id="commands">
+                <h3 class="commands-title">Available Commands</h3>
+            </div>
+        </div>
+    </div>
+    <script src="panel.js"></script>
+</body>
+</html>
