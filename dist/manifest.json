@@ -5,12 +5,6 @@
     "background": {
       "service_worker": "backend.js"
     },
-    "permissions": [
-      "sidePanel"
-    ],
-    "side_panel": {
-      "default_path": "panel.html"
-    },
     "content_scripts": [
       {
         "matches": ["*://docs.google.com/document/*"],

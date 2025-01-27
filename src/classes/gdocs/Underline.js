@@ -101,7 +101,6 @@ export class Underline {
       }
     })
 
-    // Rebuild all underlines
     corrections.forEach(correction => {
       const { start, end, corrected_text, error_type, originalText } = correction
       const groupId = `${start}-${end}-${error_type}`
@@ -236,7 +235,6 @@ export class Underline {
       })
     })
 
-    // Attach mousemove logic using this.tooltip
     document.addEventListener("mousemove", e => {
       const mouseX = e.clientX + window.scrollX
       const mouseY = e.clientY + window.scrollY
@@ -272,7 +270,6 @@ export class Underline {
             mouseY <= y + height
           ) {
             hoveredGroup = elem.groupId
-            // store these coords if needed
             elem.underlineCoords = {
               x1: parseFloat(line.getAttribute("x1")),
               x2: parseFloat(line.getAttribute("x2")),
@@ -290,27 +287,26 @@ export class Underline {
         }
       }
 
-      // highlight hovered group
       this.underlineElements.forEach(el => {
-        const line = el.groupElement.querySelector("line")
-        if (el.groupId === hoveredGroup) {
-          el.highlightRect.setAttribute("fill", el.hoverColor)
-          line.setAttribute("stroke-width", "3")
-          line.setAttribute("stroke-opacity", "1")
-          line.setAttribute(
-            "stroke",
-            el.error_type === "Grammar" ? "#B01030" : "#003C6B"
-          )
+        const line = el.groupElement.querySelector("line");
+        if (el.groupId === hoveredGroup || el.isHovered) {
+            el.highlightRect.setAttribute("fill", el.hoverColor);
+            line.setAttribute("stroke-width", "3");
+            line.setAttribute("stroke-opacity", "1");
+            line.setAttribute(
+                "stroke",
+                el.error_type === "Grammar" ? "#B01030" : "#003C6B"
+            );
         } else {
-          el.highlightRect.setAttribute("fill", el.defaultColor)
-          line.setAttribute("stroke-width", "2")
-          line.setAttribute("stroke-opacity", "0.8")
-          line.setAttribute(
-            "stroke",
-            el.error_type === "Grammar" ? "#FF6347" : "#4682B4"
-          )
+            el.highlightRect.setAttribute("fill", el.defaultColor);
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("stroke-opacity", "0.8");
+            line.setAttribute(
+                "stroke",
+                el.error_type === "Grammar" ? "#FF6347" : "#4682B4"
+            );
         }
-      })
+    });
 
       if (activeElements.length > 0) {
         const firstEl = activeElements[0]
