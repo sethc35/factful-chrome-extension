@@ -50,7 +50,7 @@ function initializeExtension() {
   }, 1000)
 
   function isEditableElement(element) {
-    return element && element.matches('input[type="text"], textarea, [contenteditable="true"]')
+    return element && (element instanceof HTMLTextAreaElement || element.isContentEditable);
   }
 
   function getCaretPosition(element) {
@@ -69,58 +69,57 @@ function initializeExtension() {
     return null
   }
 
-  function getCursorRect(element, slashIndex) {
+  function getCursorRect(element, position) {
     if (element instanceof HTMLTextAreaElement) {
-      const mirror = document.createElement('div')
-      const computedStyle = window.getComputedStyle(element)
-      for (const key of computedStyle) {
-        mirror.style[key] = computedStyle[key]
-      }
-      mirror.style.position = 'absolute'
-      mirror.style.visibility = 'hidden'
-      mirror.style.whiteSpace = 'pre-wrap'
-      mirror.style.wordWrap = 'break-word'
-      mirror.style.overflow = 'hidden'
-      mirror.style.width = element.offsetWidth + 'px'
-      const textBeforeSlash = element.value.substring(0, slashIndex + 1)
-      mirror.textContent = textBeforeSlash
-      const measureSpan = document.createElement('span')
-      measureSpan.textContent = '|'
-      mirror.appendChild(measureSpan)
-      document.body.appendChild(mirror)
-      const elementRect = element.getBoundingClientRect()
-      const spanRect = measureSpan.getBoundingClientRect()
-      const mirrorRect = mirror.getBoundingClientRect()
-      const coords = {
-        left: elementRect.left + (spanRect.left - mirrorRect.left),
-        bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
-      }
-      document.body.removeChild(mirror)
-      return coords
-    } else if (element.isContentEditable) {
-      const selection = window.getSelection()
-      if (!selection.rangeCount) return null
-      const range = document.createRange()
-      let node = element
-      let charCount = 0
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
-      while (node == walker.nextNode()) {
-        const nodeLength = node.textContent.length
-        if (charCount + nodeLength >= slashIndex) {
-          const offset = slashIndex - charCount
-          range.setStart(node, offset)
-          range.setEnd(node, offset + 1)
-          break
+        // Restore original textarea positioning
+        const mirror = document.createElement('div');
+        const computedStyle = window.getComputedStyle(element);
+        for (const key of computedStyle) {
+            mirror.style[key] = computedStyle[key];
         }
-        charCount += nodeLength
-      }
-      const rect = range.getBoundingClientRect()
-      return {
-        left: rect.left,
-        bottom: rect.bottom
-      }
+        mirror.style.position = 'absolute';
+        mirror.style.visibility = 'hidden';
+        mirror.style.whiteSpace = 'pre-wrap';
+        mirror.style.wordWrap = 'break-word';
+        mirror.style.overflow = 'hidden';
+        mirror.style.width = element.offsetWidth + 'px';
+        const textBeforeSlash = element.value.substring(0, position + 1);
+        mirror.textContent = textBeforeSlash;
+        const measureSpan = document.createElement('span');
+        measureSpan.textContent = '|';
+        mirror.appendChild(measureSpan);
+        document.body.appendChild(mirror);
+        const elementRect = element.getBoundingClientRect();
+        const spanRect = measureSpan.getBoundingClientRect();
+        const mirrorRect = mirror.getBoundingClientRect();
+        const coords = {
+            left: elementRect.left + (spanRect.left - mirrorRect.left),
+            top: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height,
+            bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
+        };
+        document.body.removeChild(mirror);
+        return coords;
+    } else if (element.isContentEditable) {
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return null;
+        const range = sel.getRangeAt(0).cloneRange();
+        range.collapse(true);
+        const span = document.createElement('span');
+        span.textContent = '\u200b';
+        span.style.position = 'absolute';
+        span.style.opacity = '0';
+        range.insertNode(span);
+        const rect = span.getBoundingClientRect();
+        const elementStyles = window.getComputedStyle(element);
+        const paddingLeft = parseFloat(elementStyles.paddingLeft) || 0;
+        span.remove();
+        return {
+            left: rect.left - paddingLeft,
+            top: rect.top,
+            bottom: rect.bottom
+        };
     }
-    return null
+    return null;
   }
 
   function detectSlashCommand(e) {
@@ -135,7 +134,7 @@ function initializeExtension() {
         const rect = getCursorRect(activeElement, slashIndex)
         slashCommand.currentInput = typedCommand
         slashCommand.showSlashCommands(
-          { left: rect.left, top: 0, bottom: rect.bottom, right: rect.left },
+          { left: rect.left, top: rect.top, bottom: rect.bottom },
           typedCommand
         )
       } else {
@@ -147,40 +146,46 @@ function initializeExtension() {
   }
 
   function handleInput(e) {
-    if (!isEditableElement(e.target)) return
+    if (!isEditableElement(e.target)) return;
     if (activeElement !== e.target) {
-      underline.clearUnderlines(activeElement)
-      activeElement = e.target
+      underline.clearUnderlines(activeElement);
+      activeElement = e.target;
       if (observer) {
-        observer.disconnect()
+        observer.disconnect();
       }
       observer = new MutationObserver(() => {
-        if (!activeElement) return
-        let mutationTimeout = null
-        clearTimeout(mutationTimeout)
+        if (!activeElement) return;
+        let mutationTimeout = null;
+        clearTimeout(mutationTimeout);
         mutationTimeout = setTimeout(() => {
-          debouncedApiUpdate()
-        }, 100)
-      })
-      if (activeElement) {
-        observer.observe(activeElement, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-          attributes: true,
-          attributeFilter: ['style', 'class', 'width', 'height']
-        })
+          debouncedApiUpdate();
+        }, 100);
+      });
+      
+      const observerConfig = {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'width', 'height']
+      };
+      
+      if (activeElement instanceof HTMLTextAreaElement) {
+        observer.observe(activeElement, { attributes: true });
+      } else if (activeElement.isContentEditable) {
+        observer.observe(activeElement, observerConfig);
       }
     }
-    isTyping = true
-    clearTimeout(typeTimeout)
+    
+    isTyping = true;
+    clearTimeout(typeTimeout);
     typeTimeout = setTimeout(() => {
       if (activeElement === e.target) {
-        isTyping = false
-        debouncedApiUpdate()
+        isTyping = false;
+        debouncedApiUpdate();
       }
-    }, 2000)
-    detectSlashCommand(e)
+    }, 2000);
+    detectSlashCommand(e);
   }
 
   document.addEventListener('input', handleInput)
@@ -206,7 +211,7 @@ function initializeExtension() {
         slashCommand.updateSelectedIndex(1)
         e.preventDefault()
       } else if (e.key === 'Enter') {
-        const selectedOption = slashCommand.getSlashCommandUI().children[
+        const selectedOption = slashCommand.slashCommandUI.children[
           slashCommand.selectedIndex
         ]
         if (selectedOption) {
@@ -222,66 +227,100 @@ function initializeExtension() {
   })
 
   function handleMouseMove(e) {
-    clearTimeout(tooltipHideTimeout)
-    if (!activeElement) return
-    const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY)
+    clearTimeout(tooltipHideTimeout);
+    if (!activeElement) return;
+    
+    const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY);
     const foundHighlight = Array.from(
       underline.overlay.getElementsByClassName('word-highlight')
     ).find(el => {
-      const rect = el.getBoundingClientRect()
+      const rect = el.getBoundingClientRect();
+      const buffer = 4;
       return (
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top - 4 &&
-        e.clientY <= rect.bottom + 4
-      )
-    })
-    const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'))
+        e.clientX >= rect.left - buffer &&
+        e.clientX <= rect.right + buffer &&
+        e.clientY >= rect.top - buffer &&
+        e.clientY <= rect.bottom + buffer
+      );
+    });
+  
+    const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'));
+    
     if ((foundHighlight || isOverTooltip) && activeElement) {
-      let element
+      let element;
       if (foundHighlight) {
-        const correctionId = foundHighlight.dataset.correctionId
-        const correctionGroup = underline.underlines.get(activeElement)?.filter(
+        const correctionId = foundHighlight.dataset.correctionId;
+        const correctionGroups = underline.underlines.get(activeElement);
+        const correctionGroup = correctionGroups?.find(
           group => group.correctionId === correctionId
-        )
-        element = correctionGroup ? correctionGroup[0] : null
+        );
+        
+        element = correctionGroup || null;
         if (element) {
-          currentHoverElement = element
+          currentHoverElement = element;
+
+          if (activeElement.isContentEditable && !element.boundingRect) {
+            const highlightRect = foundHighlight.getBoundingClientRect();
+            element.boundingRect = {
+              top: highlightRect.top,
+              left: highlightRect.left,
+              right: highlightRect.right,
+              bottom: highlightRect.bottom,
+              width: highlightRect.width,
+              height: highlightRect.height
+            };
+          }
         }
       } else if (isOverTooltip && currentHoverElement) {
-        element = currentHoverElement
+        element = currentHoverElement;
       }
+  
       if (element) {
         if (
           foundHighlight &&
           (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== foundHighlight.dataset.correctionId)
         ) {
           if (hoveredUnderline) {
-            underline.removeHoverEffect(activeElement, hoveredUnderline)
+            underline.removeHoverEffect(activeElement, hoveredUnderline);
           }
-          underline.addHoverEffect(activeElement, foundHighlight)
-          hoveredUnderline = foundHighlight
+          underline.addHoverEffect(activeElement, foundHighlight);
+          hoveredUnderline = foundHighlight;
         }
-        if (element.boundingRect) {
-          tooltip.showTooltip(element.boundingRect, element.errorType, element.correctedText, element.citations)
+
+        if (activeElement.isContentEditable && foundHighlight) {
+          const highlightRect = foundHighlight.getBoundingClientRect();
+          tooltip.showTooltip(
+            highlightRect,
+            element.errorType,
+            element.correctedText,
+            element.citations
+          );
+        } else if (element.boundingRect) {
+          tooltip.showTooltip(
+            element.boundingRect,
+            element.errorType,
+            element.correctedText,
+            element.citations
+          );
         }
       }
     } else {
-      const tooltipBounds = tooltip.getElement().getBoundingClientRect()
+      const tooltipBounds = tooltip.getElement().getBoundingClientRect();
       const isMouseNearTooltip =
         e.clientX >= tooltipBounds.left - 5 &&
         e.clientX <= tooltipBounds.right + 5 &&
         e.clientY >= tooltipBounds.top - 5 &&
-        e.clientY <= tooltipBounds.bottom + 5
+        e.clientY <= tooltipBounds.bottom + 5;
+  
       if (!isMouseNearTooltip) {
         tooltipHideTimeout = setTimeout(() => {
           if (hoveredUnderline) {
-            underline.removeHoverEffect(activeElement, hoveredUnderline)
-            hoveredUnderline = null
+            underline.removeHoverEffect(activeElement, hoveredUnderline);
+            hoveredUnderline = null;
           }
-          currentHoverElement = null
-          tooltip.hideTooltip()
-        }, 100)
+          currentHoverElement = null;
+          tooltip.hideTooltip();
+        }, 100);
       }
     }
   }
@@ -307,124 +346,122 @@ function initializeExtension() {
   tooltip.getElement().addEventListener('mouseleave', handleMouseLeave)
 
   tooltip.getElement().addEventListener('click', async e => {
-    if (!activeElement || !hoveredUnderline) return
-    const correctionId = hoveredUnderline.dataset.correctionId
+    if (!activeElement || !hoveredUnderline) return;
+    const correctionId = hoveredUnderline.dataset.correctionId;
     const correctionGroup = underline.underlines.get(activeElement)?.find(
       group => group.correctionId === correctionId
-    )
+    );
+    
     if (correctionGroup) {
       try {
         const differences = underline.findTextDifferences(
           correctionGroup.originalText,
           correctionGroup.correctedText
-        )
-        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText)
+        );
+        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText);
+        
         if (startIndex !== -1) {
-          const diffStartIndex = startIndex + differences.oldStart
-          const diffEndIndex = startIndex + differences.oldEnd
-          const hadFocus = document.activeElement === activeElement
+          const diffStartIndex = startIndex + differences.oldStart;
+          const diffEndIndex = startIndex + differences.oldEnd;
+          const hadFocus = document.activeElement === activeElement;
+          
           if (activeElement instanceof HTMLTextAreaElement) {
-            const currentText = activeElement.value
-            const beforeText = currentText.substring(0, diffStartIndex)
-            const afterText = currentText.substring(diffEndIndex)
-            const inputEvent = new InputEvent('input', {
-              bubbles: true,
-              cancelable: true,
-              inputType: 'insertText',
-              data: differences.newDiff
-            })
-            activeElement.value = beforeText + differences.newDiff + afterText
-            activeElement.dispatchEvent(inputEvent)
+            const currentText = activeElement.value;
+            const beforeText = currentText.substring(0, diffStartIndex);
+            const afterText = currentText.substring(diffEndIndex);
+            activeElement.value = beforeText + differences.newDiff + afterText;
+            
             if (hadFocus) {
-              activeElement.focus()
+              activeElement.focus();
               activeElement.setSelectionRange(
                 diffStartIndex + differences.newDiff.length,
                 diffStartIndex + differences.newDiff.length
-              )
+              );
             }
           } else if (activeElement.isContentEditable) {
-            const selection = window.getSelection()
-            const range = document.createRange()
+            const selection = window.getSelection();
+            const range = document.createRange();
+            let textNode = null;
+            
             const walker = document.createTreeWalker(
               activeElement,
               NodeFilter.SHOW_TEXT,
               null,
               false
-            )
-            let currentNode = walker.nextNode()
-            let currentPosition = 0
-            while (currentNode) {
-              const nodeLength = currentNode.length
-              if (currentPosition + nodeLength >= diffStartIndex) {
-                const localStart = diffStartIndex - currentPosition
-                const localEnd = Math.min(diffEndIndex - currentPosition, nodeLength)
-                range.setStart(currentNode, localStart)
-                range.setEnd(currentNode, localEnd)
-                const inputEvent = new InputEvent('input', {
-                  bubbles: true,
-                  cancelable: true,
-                  inputType: 'insertText',
-                  data: differences.newDiff
-                })
-                range.deleteContents()
-                const textNode = document.createTextNode(differences.newDiff)
-                range.insertNode(textNode)
-                activeElement.dispatchEvent(inputEvent)
-                if (hadFocus) {
-                  const newRange = document.createRange()
-                  newRange.setStartAfter(textNode)
-                  newRange.collapse(true)
-                  selection.removeAllRanges()
-                  selection.addRange(newRange)
-                }
-                break
+            );
+            
+            let currentPos = 0;
+            while ((textNode = walker.nextNode()) !== null) {
+              const nodeLength = textNode.length;
+              if (currentPos <= diffStartIndex && diffStartIndex < currentPos + nodeLength) {
+                const localStart = diffStartIndex - currentPos;
+                const localEnd = Math.min(diffEndIndex - currentPos, nodeLength);
+                range.setStart(textNode, localStart);
+                range.setEnd(textNode, localEnd);
+                break;
               }
-              currentPosition += nodeLength
-              currentNode = walker.nextNode()
+              currentPos += nodeLength;
+            }
+            
+            if (textNode) {
+              range.deleteContents();
+              const newTextNode = document.createTextNode(differences.newDiff);
+              range.insertNode(newTextNode);
+              
+              if (hadFocus) {
+                const newRange = document.createRange();
+                newRange.setStartAfter(newTextNode);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              }
             }
           }
+
           correctionGroup.underlines.forEach(underlineEl => {
-            if (underlineEl && underlineEl.parentNode) {
-              underlineEl.style.transform = 'scaleX(0)'
-              underlineEl.style.transformOrigin = 'right'
-              underlineEl.style.transition = 'transform 0.3s ease-in'
-              setTimeout(() => {
-                if (underlineEl.parentNode) {
-                  underlineEl.remove()
-                }
-              }, 300)
+            if (underlineEl?.parentNode) {
+              underlineEl.style.transform = 'scaleX(0)';
+              setTimeout(() => underlineEl.remove(), 300);
             }
-          })
+          });
+          
           correctionGroup.highlights.forEach(highlight => {
-            if (highlight && highlight.parentNode) {
-              highlight.style.opacity = '0'
-              setTimeout(() => {
-                if (highlight.parentNode) {
-                  highlight.remove()
-                }
-              }, 300)
+            if (highlight?.parentNode) {
+              highlight.style.opacity = '0';
+              setTimeout(() => highlight.remove(), 300);
             }
-          })
-          const existingGroups = underline.underlines.get(activeElement)
+          });
+          
+          const existingGroups = underline.underlines.get(activeElement);
           if (existingGroups) {
             const updatedGroups = existingGroups.filter(
               group => group.correctionId !== correctionId
-            )
+            );
             if (updatedGroups.length > 0) {
-              underline.underlines.set(activeElement, updatedGroups)
+              underline.underlines.set(activeElement, updatedGroups);
             } else {
-              underline.underlines.delete(activeElement)
+              underline.underlines.delete(activeElement);
             }
           }
-          tooltip.hideTooltip()
-          underline.removeHoverEffect(activeElement, hoveredUnderline)
-          hoveredUnderline = null
+          
+          tooltip.hideTooltip();
+          underline.removeHoverEffect(activeElement, hoveredUnderline);
+          hoveredUnderline = null;
+
+          const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            inputType: 'insertText',
+            data: differences.newDiff
+          });
+          activeElement.dispatchEvent(inputEvent);
+          
           setTimeout(() => {
-            debouncedApiUpdate()
-          }, 500)
+            debouncedApiUpdate();
+          }, 500);
         }
       } catch (error) {
-        console.log('error clicking tooltip: ', error);
+        console.error('Error applying correction:', error);
       }
     }
   })

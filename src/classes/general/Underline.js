@@ -348,23 +348,17 @@ export class Underline {
     requestAnimationFrame(() => {
       const elementRect = element.getBoundingClientRect();
       const container = this.getFieldContainer(element);
-      const currentValue = element.value || element.textContent || '';
       const toRemove = new Set();
-
+  
       container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`;
       container.style.width = `${element.offsetWidth}px`;
       container.style.height = `${element.offsetHeight}px`;
-      container.style.overflow = 'hidden';
   
       if (element instanceof HTMLTextAreaElement) {
         const mirror = this.createMirrorElement(element);
-        const textNode = document.createTextNode(currentValue);
+        const textNode = document.createTextNode(element.value);
         mirror.appendChild(textNode);
         document.body.appendChild(mirror);
-  
-        const elementStyle = window.getComputedStyle(element);
-        const paddingTop = parseFloat(elementStyle.paddingTop);
-        const paddingLeft = parseFloat(elementStyle.paddingLeft);
   
         groups.forEach((group, groupIndex) => {
           const startIndex = this.findTextPosition(element, group.originalText);
@@ -381,73 +375,39 @@ export class Underline {
             range.setStart(textNode, diffStartIndex);
             range.setEnd(textNode, diffEndIndex);
   
-            const rects = Array.from(range.getClientRects());
-            if (rects.length === 0) {
-              toRemove.add(groupIndex);
-              return;
-            }
-  
             group.underlines.forEach(u => u.remove());
             group.highlights.forEach(h => h.remove());
             group.underlines = [];
             group.highlights = [];
-
-            let scrollContainer = container.querySelector('.scroll-container');
-            if (!scrollContainer) {
-              scrollContainer = document.createElement('div');
-              scrollContainer.className = 'scroll-container';
-              scrollContainer.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                overflow: hidden;
-              `;
-              container.appendChild(scrollContainer);
-            }
-
-            let scrollContent = scrollContainer.querySelector('.scroll-content');
-            if (!scrollContent) {
-              scrollContent = document.createElement('div');
-              scrollContent.className = 'scroll-content';
-              scrollContainer.appendChild(scrollContent);
-            }
-            
-            scrollContent.style.cssText = `
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              transform: translateY(${-element.scrollTop}px);
-            `;
-            scrollContent.style.transform = `translate3d(0, ${-element.scrollTop}px, 0)`;
   
-            rects.forEach((rect, index) => {
+            const scrollContainer = document.createElement('div');
+            scrollContainer.className = 'scroll-container';
+            container.appendChild(scrollContainer);
+  
+            const scrollContent = document.createElement('div');
+            scrollContent.className = 'scroll-content';
+            scrollContent.style.transform = `translate3d(0, ${-element.scrollTop}px, 0)`;
+            scrollContainer.appendChild(scrollContent);
+  
+            Array.from(range.getClientRects()).forEach((rect, index) => {
               const offsetLeft = rect.left - mirror.getBoundingClientRect().left;
               const offsetTop = rect.top - mirror.getBoundingClientRect().top;
   
               const highlight = document.createElement('div');
               highlight.className = 'word-highlight';
-              highlight.style.cssText = `
-                position: absolute;
-                left: ${offsetLeft}px;
-                top: ${offsetTop}px;
-                width: ${rect.width}px;
-                height: ${rect.height}px;
-              `;
+              highlight.style.left = `${offsetLeft}px`;
+              highlight.style.top = `${offsetTop}px`;
+              highlight.style.width = `${rect.width}px`;
+              highlight.style.height = `${rect.height}px`;
               highlight.dataset.correctionId = group.correctionId;
               scrollContent.appendChild(highlight);
               group.highlights.push(highlight);
   
               const underline = document.createElement('div');
               underline.className = 'precise-underline';
-              underline.style.cssText = `
-                position: absolute;
-                left: ${offsetLeft}px;
-                top: ${offsetTop + rect.height - 2}px;
-                width: ${rect.width}px;
-              `;
+              underline.style.left = `${offsetLeft}px`;
+              underline.style.top = `${offsetTop + rect.height - 2}px`;
+              underline.style.width = `${rect.width}px`;
               underline.dataset.correctionId = group.correctionId;
               scrollContent.appendChild(underline);
               group.underlines.push(underline);
@@ -458,14 +418,93 @@ export class Underline {
         });
   
         document.body.removeChild(mirror);
+      } else if (element.isContentEditable) {
+        groups.forEach((group, groupIndex) => {
+          const treeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          let text = '';
+          const textNodes = [];
+          let currentNode;
   
-        Array.from(toRemove).reverse().forEach(index => {
-          const group = groups[index];
-          group.underlines.forEach(underline => underline.remove());
-          group.highlights.forEach(highlight => highlight.remove());
-          groups.splice(index, 1);
+          while ((currentNode = treeWalker.nextNode())) {
+            textNodes.push(currentNode);
+            text += currentNode.textContent;
+          }
+  
+          const startIndex = text.indexOf(group.originalText);
+          if (startIndex === -1) {
+            toRemove.add(groupIndex);
+            return;
+          }
+  
+          let currentLength = 0;
+          let startNode, endNode, startOffset, endOffset;
+  
+          for (let i = 0; i < textNodes.length; i++) {
+            const nodeLength = textNodes[i].textContent.length;
+            if (!startNode && startIndex >= currentLength && startIndex < currentLength + nodeLength) {
+              startNode = textNodes[i];
+              startOffset = startIndex - currentLength;
+            }
+            if (!endNode && startIndex + group.originalText.length <= currentLength + nodeLength) {
+              endNode = textNodes[i];
+              endOffset = startIndex + group.originalText.length - currentLength;
+            }
+            currentLength += nodeLength;
+          }
+  
+          if (!startNode || !endNode) {
+            toRemove.add(groupIndex);
+            return;
+          }
+  
+          try {
+            const range = document.createRange();
+            range.setStart(startNode, startOffset);
+            range.setEnd(endNode, endOffset);
+  
+            group.underlines.forEach(u => u.remove());
+            group.highlights.forEach(h => h.remove());
+            group.underlines = [];
+            group.highlights = [];
+  
+            Array.from(range.getClientRects()).forEach(rect => {
+              const offsetLeft = rect.left - elementRect.left;
+              const offsetTop = rect.top - elementRect.top;
+  
+              const highlight = document.createElement('div');
+              highlight.className = 'word-highlight';
+              highlight.style.left = `${offsetLeft}px`;
+              highlight.style.top = `${offsetTop}px`;
+              highlight.style.width = `${rect.width}px`;
+              highlight.style.height = `${rect.height}px`;
+              highlight.dataset.correctionId = group.correctionId;
+              container.appendChild(highlight);
+              group.highlights.push(highlight);
+  
+              const underline = document.createElement('div');
+              underline.className = 'precise-underline';
+              underline.style.left = `${offsetLeft}px`;
+              underline.style.top = `${offsetTop + rect.height - 2}px`;
+              underline.style.width = `${rect.width}px`;
+              underline.dataset.correctionId = group.correctionId;
+              container.appendChild(underline);
+              group.underlines.push(underline);
+  
+              highlight.addEventListener('mouseenter', () => this.addHoverEffect(element, highlight));
+              highlight.addEventListener('mouseleave', () => this.removeHoverEffect(element, highlight));
+            });
+          } catch (e) {
+            toRemove.add(groupIndex);
+          }
         });
       }
+  
+      Array.from(toRemove).reverse().forEach(index => {
+        const group = groups[index];
+        group.underlines.forEach(underline => underline.remove());
+        group.highlights.forEach(highlight => highlight.remove());
+        groups.splice(index, 1);
+      });
     });
   }
 
