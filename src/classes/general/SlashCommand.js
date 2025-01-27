@@ -565,6 +565,10 @@ export class SlashCommand {
             btn.addEventListener('mouseout', () => {
                 btn.style.backgroundColor = '#f3f4f6';
             });
+
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+            });
     
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -576,8 +580,6 @@ export class SlashCommand {
             
                 const element = this.lastFocusedElement || document.activeElement;
                 if (!element) return;
-
-                element.focus();
             
                 requestAnimationFrame(() => {
                     try {
@@ -585,40 +587,45 @@ export class SlashCommand {
                             const sel = window.getSelection();
                             let range = null;
             
-                            if (sel.rangeCount > 0) {
+                            if (sel.rangeCount) {
                                 range = sel.getRangeAt(0);
+                            } else if (this.originalRange) {
+                                range = this.originalRange.cloneRange();
+                                sel.addRange(range);
                             } else {
                                 range = document.createRange();
                                 range.selectNodeContents(element);
                                 range.collapse(false);
                                 sel.addRange(range);
                             }
-
+            
                             const textNode = document.createTextNode(item + ' ');
                             range.deleteContents();
                             range.insertNode(textNode);
-
+            
                             const newRange = document.createRange();
-                            newRange.setStartAfter(textNode);
+                            newRange.setStart(textNode, textNode.length);
                             newRange.collapse(true);
                             sel.removeAllRanges();
                             sel.addRange(newRange);
+                            
+                            this.originalRange = newRange.cloneRange();
                         } else {
                             const start = element.selectionStart;
                             element.setRangeText(item, start, start, 'end');
+                            element.selectionEnd = start + item.length;
                         }
-
+            
                         element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                     } catch (error) {
-                        element.textContent += item + ' ';
+                        console.error('Insertion error:', error);
                     }
             
                     setTimeout(() => {
-                        element.focus();
                         isProcessing = false;
                     }, 50);
                 });
-            });                 
+            });     
     
             popdown.appendChild(btn);
         });
