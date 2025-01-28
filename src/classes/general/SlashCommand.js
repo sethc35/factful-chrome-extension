@@ -16,7 +16,7 @@ export class SlashCommand {
                 ]
             },
             '/search': {
-                description: 'Search for information',
+                description: 'Generate anything',
                 parameters: [
                     { name: 'word', type: 'text' }
                 ]
@@ -28,6 +28,9 @@ export class SlashCommand {
         this.slashCommandUI = null
         this.parameterUI = null
         this.lastFocusedElement = null
+        this.originalRange = null;
+        this.lastKeyPresses = [];
+        this.keyPressTimeout = null;
         this.addStyles()
         this.createSlashCommandUI()
         this.createParameterUI()
@@ -51,17 +54,17 @@ export class SlashCommand {
         const style = document.createElement('style')
         style.textContent = `
             .slash-command-ui {
-                position: fixed;
-                background-color: #ffffff;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                padding: 8px 0;
-                z-index: 2147483647;
+                position: absolute;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                padding: 4px 0;
+                z-index: 9999999;
                 display: none;
-                max-height: 200px;
+                max-height: 250px;
                 overflow-y: auto;
-                min-width: 200px;
+                min-width: 180px;
                 pointer-events: auto;
             }
             .slash-command-option {
@@ -73,15 +76,17 @@ export class SlashCommand {
             }
             .slash-command-option span {
                 display: inline-block;
-                font-size: 13px;
-                color: #374151;
+                font-size: 14px;
+                color: #111;
             }
             .slash-command-option span:first-child {
                 font-weight: 600;
                 color: #2196F3;
             }
-            .slash-command-option:hover {
-                background-color: #f3f4f6;
+            .slash-command-option:hover,
+            .slash-command-option.selected {
+                background-color: #ADD8E6;
+                color: #fff;
             }
             .parameter-ui {
                 position: fixed;
@@ -195,39 +200,206 @@ export class SlashCommand {
     }
 
     initKeyboardListeners() {
+        let shortcutBuffer = [];
+        let shortcutTimeout;
+    
         document.addEventListener('keydown', (event) => {
-            if (event.altKey && event.key === '/') {
-                if (!this.lastFocusedElement) return
-                const cursorRect = this.getCursorRect(
+            if (shortcutTimeout) {
+                clearTimeout(shortcutTimeout);
+            }
+    
+            shortcutBuffer.push({
+                key: event.key,
+                ctrl: event.ctrlKey || event.metaKey,
+                shift: event.shiftKey,
+                alt: event.altKey
+            });
+    
+            if (shortcutBuffer.length > 3) {
+                shortcutBuffer.shift();
+            }
+    
+            shortcutTimeout = setTimeout(() => {
+                shortcutBuffer = [];
+            }, 500);
+    
+            const lastTwoSlashes = shortcutBuffer
+                .slice(-2)
+                .every(press => press.key === '/' && press.ctrl);
+    
+            if (lastTwoSlashes) {
+                event.preventDefault();
+                event.stopPropagation();
+    
+                if (!this.lastFocusedElement) return;
+    
+                this.currentInput = '';
+                this.removeLastTextNode(this.lastFocusedElement);
+    
+                const cursorRect = this.getCursorPosition(
                     this.lastFocusedElement,
                     this.getCaretPosition(this.lastFocusedElement)
-                )
+                );
+    
                 if (cursorRect) {
-                    this.isActive = true
-                    this.showSlashCommands(cursorRect)
+                    this.showSlashCommands(cursorRect, this.currentInput);
                 }
-                event.preventDefault()
+    
+                shortcutBuffer = [];
+                return;
             }
-            if (this.isActive) {
-                if (event.key === 'ArrowUp') {
-                    this.updateSelectedIndex(-1)
-                    event.preventDefault()
-                } else if (event.key === 'ArrowDown') {
-                    this.updateSelectedIndex(1)
-                    event.preventDefault()
-                } else if (event.key === 'Enter') {
-                    const selectedOption = this.slashCommandUI.children[this.selectedIndex]
-                    if (selectedOption) {
-                        const command = selectedOption.querySelector('span').textContent
-                        this.selectCommand(command)
-                    }
-                    event.preventDefault()
-                } else if (event.key === 'Escape') {
-                    this.hideSlashCommandUI()
-                    event.preventDefault()
+    
+            if (event.key === 'Enter' && this.isActive) {
+                const selectedOption = this.slashCommandUI.children[this.selectedIndex];
+                if (selectedOption) {
+                    const command = selectedOption.querySelector('span').textContent;
+                    this.selectCommand(command);
+                }
+                event.preventDefault();
+            } else if (event.key === 'Escape') {
+                this.resetTracking();
+                event.preventDefault();
+            } else if (event.key === 'ArrowUp' && this.isActive) {
+                this.updateSelectedIndex(-1);
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown' && this.isActive) {
+                this.updateSelectedIndex(1);
+                event.preventDefault();
+            } else if (
+                this.isActive &&
+                event.key.length === 1 &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey
+            ) {
+                this.currentInput += event.key;
+                const cursorRect = this.getCursorPosition(
+                    this.lastFocusedElement,
+                    this.getCaretPosition(this.lastFocusedElement)
+                );
+                if (cursorRect) {
+                    this.showSlashCommands(cursorRect, this.currentInput);
+                }
+            } else if (this.isActive && event.key === 'Backspace') {
+                this.currentInput = this.currentInput.slice(0, -1);
+                const cursorRect = this.getCursorPosition(
+                    this.lastFocusedElement,
+                    this.getCaretPosition(this.lastFocusedElement)
+                );
+                if (cursorRect) {
+                    this.showSlashCommands(cursorRect, this.currentInput);
                 }
             }
-        })
+        });
+    
+        document.addEventListener('blur', () => {
+            shortcutBuffer = [];
+        }, true);
+    
+        document.addEventListener('click', (event) => {
+            if (!this.slashCommandUI.contains(event.target)) {
+                this.resetTracking();
+            }
+        });
+    }
+
+    removeLastTextNode(element) {
+        if (element.isContentEditable) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            const range = selection.getRangeAt(0);
+            const startContainer = range.startContainer;
+            
+            if (startContainer.nodeType === Node.TEXT_NODE) {
+                const text = startContainer.textContent;
+                const currentPos = range.startOffset;
+                
+                let wordStart = currentPos;
+                while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
+                    wordStart--;
+                }
+
+                const newText = text.substring(0, wordStart) + 
+                              (wordStart > 0 ? ' ' : '') + 
+                              text.substring(currentPos);
+                
+                startContainer.textContent = newText;
+                
+                range.setStart(startContainer, wordStart);
+                range.setEnd(startContainer, wordStart);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const inputEvent = new InputEvent('input', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                element.dispatchEvent(inputEvent);
+            }
+        } else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+            const cursorPos = element.selectionStart;
+            const text = element.value;
+            
+            let wordStart = cursorPos;
+            while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
+                wordStart--;
+            }
+
+            const newText = text.substring(0, wordStart) + 
+                          (wordStart > 0 ? ' ' : '') + 
+                          text.substring(cursorPos);
+            
+            element.value = newText;
+            element.selectionStart = wordStart;
+            element.selectionEnd = wordStart;
+            
+            const inputEvent = new InputEvent('input', {
+                bubbles: true,
+                cancelable: true,
+            });
+            element.dispatchEvent(inputEvent);
+        }
+    }
+
+    selectCommand(command) {
+        const popdownRect = this.slashCommandUI.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const isAboveCursor = popdownRect.top > viewportHeight / 2;
+    
+        this.lastPopdownPosition = {
+            left: popdownRect.left,
+            top: popdownRect.top,
+            bottom: popdownRect.bottom,
+            width: popdownRect.width,
+            isAboveCursor: isAboveCursor
+        };
+    
+        const element = this.lastFocusedElement || document.activeElement;
+        this.originalRange = null;
+    
+        if (element.isContentEditable) {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                this.originalRange = sel.getRangeAt(0).cloneRange();
+            }
+        } else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+            this.originalRange = {
+                start: element.selectionStart,
+                end: element.selectionEnd
+            };
+        }
+    
+        this.removeLastTextNode(element);
+        this.insertCommandBadge(command);
+        this.resetTracking();
+    }
+    
+    resetTracking() {
+        this.isActive = false;
+        this.currentInput = '';
+        this.selectedIndex = 0;
+        this.hideSlashCommandUI();
     }
 
     showSlashCommands(cursorRect, filterText = '') {
@@ -280,11 +452,6 @@ export class SlashCommand {
         })
     }
 
-    selectCommand(command) {
-        this.insertCommandBadge(command)
-        this.hideSlashCommandUI()
-    }
-
     createSlashCommandOption(command, description) {
         const option = document.createElement('div')
         option.className = 'slash-command-option'
@@ -309,7 +476,7 @@ export class SlashCommand {
         badge.style.zIndex = '2147483647'
         badge.style.display = 'inline-flex'
         badge.style.alignItems = 'center'
-        badge.style.backgroundColor = '#f1f3f4'
+        badge.style.backgroundColor = '#e0f2ff'
         badge.style.borderRadius = '3px'
         badge.style.padding = '0 4px'
         badge.style.margin = '0 1px'
@@ -324,8 +491,8 @@ export class SlashCommand {
         badge.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
     
         const commandPart = document.createElement('span')
-        commandPart.style.color = '#188038'
-        commandPart.style.fontWeight = '500'
+        commandPart.style.color = '#1d4ed8'
+        commandPart.style.fontWeight = '700'
         commandPart.style.marginRight = '4px'
         commandPart.style.userSelect = 'none'
         commandPart.style.pointerEvents = 'none'
@@ -357,14 +524,20 @@ export class SlashCommand {
             document.body.appendChild(overlayContainer)
         }
         overlayContainer.appendChild(badge)
+
+        if (this.lastPopdownPosition) {
+            const badgeHeight = 20;
+            let verticalOffset;
     
-        const caretInfo = this.getCursorPosition(element)
-        if (caretInfo && caretInfo.position !== null) {
-            const coords = this.getCursorCoordinates(element, caretInfo.position)
-            if (coords) {
-                badge.style.left = coords.left + 'px'
-                badge.style.top = coords.top + 'px'
+            if (this.lastPopdownPosition.isAboveCursor) {
+                verticalOffset = this.lastPopdownPosition.bottom - this.lastPopdownPosition.top - badgeHeight - 2;
+                badge.style.top = `${this.lastPopdownPosition.top + verticalOffset}px`;
+            } else {
+                verticalOffset = -badgeHeight - 2;
+                badge.style.top = `${this.lastPopdownPosition.top + verticalOffset}px`;
             }
+            
+            badge.style.left = `${this.lastPopdownPosition.left}px`;
         }
     
         requestAnimationFrame(() => {
