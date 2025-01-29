@@ -71,7 +71,6 @@ function initializeExtension() {
 
   function getCursorRect(element, position) {
     if (element instanceof HTMLTextAreaElement) {
-        // Restore original textarea positioning
         const mirror = document.createElement('div');
         const computedStyle = window.getComputedStyle(element);
         for (const key of computedStyle) {

@@ -53,54 +53,59 @@ export class SlashCommand {
     }
 
     addStyles() {
-        const style = document.createElement('style')
+        const style = document.createElement('style');
         style.textContent = `
             .slash-command-ui {
                 position: absolute;
                 background-color: #fff;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                padding: 4px 0;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                padding: 0;
                 z-index: 9999999;
                 display: none;
                 max-height: 250px;
                 overflow-y: auto;
-                min-width: 180px;
+                min-width: 200px;
                 pointer-events: auto;
+                font-family: Arial, sans-serif;
             }
             .slash-command-option {
-                padding: 8px 16px;
+                padding: 10px 12px;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 10px;
+                transition: background-color 0.2s ease, color 0.2s ease;
             }
             .slash-command-option span {
                 display: inline-block;
                 font-size: 14px;
-                color: #111;
+                line-height: 1.5;
             }
             .slash-command-option span:first-child {
-                font-weight: 600;
-                color: #2196F3;
+                font-weight: bold;
+                color: #007BFF; /* Adjust for blue tone */
+            }
+            .slash-command-option span:last-child {
+                color: #555; /* Subtle gray tone */
             }
             .slash-command-option:hover,
             .slash-command-option.selected {
-                background-color: #ADD8E6;
-                color: #fff;
+                background-color: #f0f8ff; /* Soft blue for hover effect */
+                color: #333;
             }
             .parameter-ui {
                 position: fixed;
                 background-color: #ffffff;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                padding: 16px;
                 z-index: 2147483647;
                 display: none;
                 flex-direction: column;
-                gap: 8px;
+                gap: 10px;
             }
             .command-badge-overlay {
                 position: absolute;
@@ -109,26 +114,22 @@ export class SlashCommand {
                 display: inline-flex;
                 align-items: center;
                 gap: 4px;
-                background-color: #f1f3f4;
-                border-radius: 3px;
-                padding: 0 4px;
-                margin: 0 1px;
-                height: 20px;
-                font-family: 'Google Sans', Roboto, Arial, sans-serif;
+                background-color: #f9f9f9;
+                border-radius: 4px;
+                padding: 4px 8px;
                 font-size: 14px;
-                line-height: 20px;
-                white-space: nowrap;
+                color: #444;
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
             [data-placeholder]:empty:before {
                 content: attr(data-placeholder);
-                color: #5f6368;
+                color: #aaa;
                 font-style: italic;
                 pointer-events: none;
             }
-        `
-        document.head.appendChild(style)
-    }
+        `;
+        document.head.appendChild(style);
+    }    
 
     createSlashCommandUI() {
         this.slashCommandUI = document.createElement('div')
