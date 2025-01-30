@@ -110,8 +110,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "getUserSession") {
-        supabase.auth.getSession().then(({ data }) => {
-            sendResponse({ session: data.session });
+        console.log('[Authenticator] Retrieving user session...');
+        
+        chrome.storage.local.get("access_token", async ({ accessToken }) => {
+            if (accessToken) {
+                const response = await fetch(`https://backend.factful.io/verify_access_token`, {
+                    method: "GET",
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`
+                    }
+                });
+              
+                if (!response.ok) {
+                    window.postMessage({ type: "factfulUserSession", data: { error: "Failed to verify access token" } }, "*");
+                } else {
+                    const data = await response.json();
+
+                    window.postMessage({ type: "factfulUserSession", data: data }, "*");
+                }
+            }
         });
         return true;
     }

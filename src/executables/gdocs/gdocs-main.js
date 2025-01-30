@@ -54,24 +54,37 @@ export function initializeGDocsTracker() {
     }
 
     const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+    checkUser();
 
     function loginWithSupabase() {
       chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
-    }
+    };
 
     function checkUser() {
-      chrome.storage.local.get("access_token", ({ accessToken }) => {
-        if (accessToken) {
-          ApiService.validateAccessToken(accessToken).then((response) => {
-            if (!response) {
-              loginWithSupabase();
-            } else {
-              isSignedIn = true;
-            }
-          })
-        }
-      });
+      console.log("[Authenticator] Checking user session...");
+
+      window.postMessage({ action: 'getUserSession' }, '*');
     };
+
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'factfulUserSession') {
+        console.log('[Authenticator] User session retrieved:', event.data.data);
+
+        if (event.data.data.error) {
+          console.log('[Authenticator] User not signed in');
+
+          isSignedIn = false;
+
+          loginWithSupabase();
+        } else {
+          console.log('[Authenticator] User signed in');
+
+          isSignedIn = true;
+        }
+      }
+    });
 
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,
@@ -359,5 +372,4 @@ export function initializeGDocsTracker() {
   }
 
   deferExecution();
-  checkUser();
 }

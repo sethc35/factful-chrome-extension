@@ -47,24 +47,6 @@ export class ApiService {
     )
   }
 
-  static async validateAccessToken(accessToken) {
-    const response = await fetch(`https://backend.factful.io/verify_access_token`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    })
-
-    if (!response.ok) {
-      console.log('[Authenticator] Invalid/expired access token.')
-      return false
-    }
-
-    const data = await response.json()
-
-    return data.data
-  }
-
   static async fetchDataFromApi() {
     try {
       const textContent = await ApiService.collectTextFromRects()
