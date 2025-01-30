@@ -2,6 +2,8 @@
 
 var Backend = Backend || {};
 
+import { supabase } from "../supabase.js";
+
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
@@ -104,6 +106,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ error: 'Failed to process command' });
             }
         })();
+        return true;
+    }
+
+    if (message.action === "getUserSession") {
+        supabase.auth.getSession().then(({ data }) => {
+            sendResponse({ session: data.session });
+        });
         return true;
     }
 });

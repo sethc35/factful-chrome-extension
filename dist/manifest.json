@@ -3,7 +3,8 @@
     "version": "1.2",
     "manifest_version": 3,
     "background": {
-      "service_worker": "backend.js"
+      "service_worker": "backend.js",
+      "type": "module"
     },
     "content_scripts": [
       {
@@ -30,7 +31,7 @@
       "default_popup": "widget.html"
     },
     "content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com"
+      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://ybxboifzbpuhrqbbcneb.supabase.co"
     },
     "web_accessible_resources": [{
       "resources": [
@@ -38,6 +39,11 @@
         "*.css"
       ],
       "matches": ["<all_urls>"]
-    }]
+    }],
+    "externally_connectable": {
+      "matches": [
+        "chrome-extension://iamfchhcgpeoccidbmhicljggniljjgi/*"
+      ]
+    }
   }
   

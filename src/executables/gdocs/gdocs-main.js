@@ -44,6 +44,7 @@ export function initializeGDocsTracker() {
     const underline = new Underline();
     const slashCommand = new SlashCommand();
     let apiData = await ApiService.fetchDataFromApi();
+    let isSignedIn = false;
     let corrections = [];
     {
       const docText = await ApiService.collectTextFromRects();
@@ -51,6 +52,26 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
+
+    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+
+    function loginWithSupabase() {
+      chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
+    }
+
+    function checkUser() {
+      chrome.storage.local.get("access_token", ({ accessToken }) => {
+        if (accessToken) {
+          ApiService.validateAccessToken(accessToken).then((response) => {
+            if (!response) {
+              loginWithSupabase();
+            } else {
+              isSignedIn = true;
+            }
+          })
+        }
+      });
+    };
 
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,
@@ -338,4 +359,5 @@ export function initializeGDocsTracker() {
   }
 
   deferExecution();
+  checkUser();
 }
