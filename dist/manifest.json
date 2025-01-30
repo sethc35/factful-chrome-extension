@@ -17,6 +17,7 @@
         "matches": ["<all_urls>"],
         "exclude_matches": ["*://docs.google.com/*", "*://app.factful.io/*"],
         "js": ["extension-main.js"],
+        "all_frames": true,
         "run_at": "document_start"
       }
     ],
