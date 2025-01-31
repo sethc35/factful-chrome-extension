@@ -80,6 +80,69 @@ Backend.sendCommand = async function(command, parameter) {
     }
 }
 
+Backend.sendButton = async function(command, input, language) {
+    try {
+        const query = encodeURIComponent(input);
+        let endpoint;
+        let isSearch = false;
+        let isTranslate = false;
+        
+        switch (command) {
+            case 'paraphrase':
+                endpoint = 'paraphrase';
+                break;
+            case 'summarize':
+                endpoint = 'summarize';
+                break;
+            case 'translate':
+                endpoint = 'translate';
+                isTranslate = true;
+                isSearch = false;
+                break;
+            case 'search':
+                endpoint = 'search';
+                isSearch = true;
+                isTranslate = false; // insurance
+                break;
+            default:
+                throw new Error('Unknown command');
+        }
+
+        const url = isTranslate 
+            ? `https://backend.factful.io/translate?text=${query}&language=${language}`
+            : isSearch
+                ? `https://backend.factful.io/${endpoint}?query=${query}`
+                : `https://backend.factful.io/${endpoint}?input=${query}`
+    
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Backend ${command} received data:`, data);
+
+        if (isSearch && data.output) {
+            return {
+                search_results: [data.output]
+            };
+        }
+
+        return data || {};
+
+    } catch (error) {
+        console.log(`sendCommand() Error: ${error}`);
+        return { error: error.message };
+    }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'fetchData') {
         (async () => {

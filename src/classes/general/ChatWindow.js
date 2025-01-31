@@ -422,12 +422,19 @@ export class ChatWindow {
 
   handleFocusIn(event) {
     const el = event.target;
+    if (el !== this.lastFocusedElement) {
+      return;
+    }
+    
     if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
       if (this.selectionStart !== null && this.selectionEnd !== null) {
-        setTimeout(() => {
-          el.selectionStart = this.selectionStart;
-          el.selectionEnd = this.selectionEnd;
-        }, 0);
+        // Only restore if the content length hasn't changed
+        if (el.value.length === this.lastContentLength) {
+          setTimeout(() => {
+            el.selectionStart = this.selectionStart;
+            el.selectionEnd = this.selectionEnd;
+          }, 0);
+        }
       }
     }
   }
@@ -436,6 +443,8 @@ export class ChatWindow {
     const el = event.target;
     if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
       this.storeSelectionData();
+      // Store the content length at the time of focus out
+      this.lastContentLength = el.value.length;
     }
   }
 
@@ -603,8 +612,20 @@ export class ChatWindow {
       const end = this.selectionEnd;
       if (start !== null && end !== null && start !== end) {
         const text = el.value;
+        // Update the element's value
         el.value = text.slice(0, start) + replacementText + text.slice(end);
-        el.selectionStart = el.selectionEnd = start + replacementText.length;
+        
+        // Update our stored selection positions to reflect the new content
+        const newPosition = start + replacementText.length;
+        this.selectionStart = newPosition;
+        this.selectionEnd = newPosition;
+        
+        // Update the actual element's selection
+        el.selectionStart = newPosition;
+        el.selectionEnd = newPosition;
+        
+        // Trigger an input event to ensure the change is registered
+        el.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } else if (el.contentEditable === 'true' && this.cachedRange) {
       const sel = window.getSelection();
@@ -613,12 +634,15 @@ export class ChatWindow {
       range.deleteContents();
       const textNode = document.createTextNode(replacementText);
       range.insertNode(textNode);
-      sel.addRange(range);
-      const newRange = document.createRange();
-      newRange.setStart(textNode, textNode.length);
-      newRange.collapse(true);
+      
+      // Update the cached range to reflect the new content
+      this.cachedRange = document.createRange();
+      this.cachedRange.selectNodeContents(textNode);
+      this.cachedRange.collapse(false);
+      
+      // Update the selection
       sel.removeAllRanges();
-      sel.addRange(newRange);
+      sel.addRange(this.cachedRange);
     }
   }
 
