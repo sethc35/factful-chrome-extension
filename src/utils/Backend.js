@@ -173,7 +173,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "getFactfulAccessToken") {
         console.log('[Authenticator] Retrieving access token...');
         
-        chrome.storage.local.get("access_token", async ({ accessToken }) => {
+        chrome.storage.local.get("access_token", async (data) => {
+            const accessToken = data.access_token;
+
             if (accessToken) {
                 const response = await fetch(`https://backend.factful.io/verify_access_token`, {
                     method: "GET",
@@ -222,6 +224,14 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
     injectRelayScript(tabId);
 
     console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.access_token) {
+        console.log("[Authenticator] Access token updated.");
+
+        relayData({ accessToken: changes.access_token.newValue });
+    }
 });
 
 function injectRelayScript(tabId) {

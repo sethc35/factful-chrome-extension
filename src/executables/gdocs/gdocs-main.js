@@ -112,6 +112,10 @@ export function initializeGDocsTracker() {
       underline.applyUnderlines(corrections, true);
     }
 
+    setTimeout(() => {
+      authenticateUser();
+    }, 10000)
+
     function authenticateUser() {
       console.log("[Authenticator] Retrieving access token...");
 

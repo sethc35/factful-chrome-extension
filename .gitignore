@@ -14,6 +14,7 @@ dist
 !dist/widget.html
 !dist/vite.svg
 !dist/auth.html
+!dist/auth.js
 !dist/assets
 dist-ssr
 *.local
