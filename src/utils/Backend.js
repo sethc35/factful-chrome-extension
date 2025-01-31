@@ -171,48 +171,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "getFactfulAccessToken") {
-        console.log('[Authenticator] Retrieving access token...');
-        
-        chrome.storage.local.get("access_token", async (data) => {
-            const accessToken = data.access_token;
-
-            if (accessToken) {
-                const response = await fetch(`https://backend.factful.io/verify_access_token`, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${accessToken}`
-                    }
-                });
-                
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.log('[Authenticator] Error verifying access token:', data.error, data.details);
-
-                    chrome.storage.local.remove("access_token");
-
-                    relayData({ error: "Failed to verify access token" });
-
-                    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
-                    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
-
-                    chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
-                } else {
-                    console.log('[Authenticator] Response received from API: ', data.data);
-
-                    relayData({ session: data.data, accessToken: accessToken });
-                }
-            } else {
-                console.log('[Authenticator] No access token found.');
-                
-                relayData({ error: "Failed to verify access token" });
-                
-                const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
-                const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
-
-                chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
-            }
-        });
+        validateAccessToken();
         return true;
     }
 });
@@ -222,6 +181,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         injectRelayScript(tabId);
 
         console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+
+        validateAccessToken();
     }
 });
   
@@ -229,6 +190,8 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
     injectRelayScript(tabId);
 
     console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+
+    validateAccessToken();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -282,6 +245,51 @@ function relayData(data) {
                 },
                 args: [data],
             });
+        }
+    });
+}
+
+function validateAccessToken() {
+    console.log('[Authenticator] Retrieving access token...');
+        
+    chrome.storage.local.get("access_token", async (data) => {
+        const accessToken = data.access_token;
+
+        if (accessToken) {
+            const response = await fetch(`https://backend.factful.io/verify_access_token`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`
+                }
+            });
+                
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.log('[Authenticator] Error verifying access token:', data.error, data.details);
+
+                chrome.storage.local.remove("access_token");
+
+                relayData({ error: "Failed to verify access token" });
+
+                const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+                const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+                chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
+            } else {
+                console.log('[Authenticator] Response received from API: ', data.data);
+
+                relayData({ session: data.data, accessToken: accessToken });
+            }
+        } else {
+            console.log('[Authenticator] No access token found.');
+                
+            relayData({ error: "Failed to verify access token" });
+                
+            const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+            const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+            chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
         }
     });
 }

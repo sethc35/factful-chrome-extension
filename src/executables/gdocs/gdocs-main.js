@@ -102,8 +102,8 @@ export function initializeGDocsTracker() {
 
     const underline = new Underline();
     const slashCommand = new SlashCommand();
-    let apiData = await ApiService.fetchDataFromApi();
     let accessToken = null;
+    let apiData = await ApiService.fetchDataFromApi(accessToken);
     let corrections = [];
     {
       const docText = await ApiService.collectTextFromRects();
@@ -111,10 +111,6 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
-
-    setTimeout(() => {
-      authenticateUser();
-    }, 10000)
 
     function authenticateUser() {
       console.log("[Authenticator] Retrieving access token...");
@@ -307,8 +303,26 @@ export function initializeGDocsTracker() {
       }
       let previousCorrections = new Set();
       const debouncedApiUpdate = debounce(async () => {
+        if (!accessToken) {
+          console.log("[Enhanced Text Tracker] User is not signed in.");
+
+          authenticateUser();
+
+          return;
+        }
+
         const freshText = await ApiService.collectTextFromRects();
-        const newApiData = await ApiService.fetchDataFromApi();
+        const newApiData = await ApiService.fetchDataFromApi(accessToken);
+
+        if (newApiData.error === "Unauthorized") {
+          console.log("[Enhanced Text Tracker] Access token is invalid/expired.");
+
+          accessToken = null;
+          authenticateUser();
+
+          return;
+        }
+
         apiData = newApiData;
         const newCorrections = ApiService.findCorrectionsInDocument(apiData, freshText);
         underline.buildRectCharIndexMapping();
