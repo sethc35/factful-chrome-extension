@@ -178,20 +178,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete') {
-        injectRelayScript(tabId);
-
-        console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
-
-        validateAccessToken();
+        isGoogleDocsTab(tabId, (isGoogleDocs) => {
+            if (isGoogleDocs) {
+                injectRelayScript(tabId);
+    
+                console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+    
+                validateAccessToken();
+            }
+        });
     }
 });
   
 chrome.tabs.onActivated.addListener(({ tabId }) => {
-    injectRelayScript(tabId);
+    isGoogleDocsTab(tabId, (isGoogleDocs) => {
+        if (isGoogleDocs) {
+            injectRelayScript(tabId);
 
-    console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+            console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
 
-    validateAccessToken();
+            validateAccessToken();
+        }
+    });
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -291,5 +299,16 @@ function validateAccessToken() {
 
             chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
         }
+    });
+}
+
+function isGoogleDocsTab(tabId, callback) {
+    chrome.tabs.get(tabId, (tab) => {
+        if (chrome.runtime.lastError || !tab.url) {
+            callback(false); 
+
+            return;
+        }
+        callback(tab.url.startsWith('https://docs.google.com'));
     });
 }
