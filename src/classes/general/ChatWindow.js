@@ -398,22 +398,23 @@ export class ChatWindow {
   }
 
   storeSelectionData() {
-    const selection = window.getSelection();
     const activeElement = document.activeElement;
     
-    if (!activeElement) return;
+    if (!this.isValidEditableElement(activeElement)) {
+      return;
+    }
     
-    if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
+    if (activeElement.tagName === 'TEXTAREA') {
       this.lastFocusedElement = activeElement;
       this.selectionStart = activeElement.selectionStart;
       this.selectionEnd = activeElement.selectionEnd;
-    } else if (activeElement.isContentEditable || activeElement.closest('[contenteditable="true"]')) {
-      const editableElement = activeElement.isContentEditable ? 
-        activeElement : 
-        activeElement.closest('[contenteditable="true"]');
+    } else {
+      const editableContainer = activeElement.closest('[contenteditable="true"], td[contenteditable="true"], table[contenteditable="true"]') 
+        || activeElement;
       
-      this.lastFocusedElement = editableElement;
+      this.lastFocusedElement = editableContainer;
       
+      const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         this.cachedRange = selection.getRangeAt(0).cloneRange();
       }
@@ -428,7 +429,6 @@ export class ChatWindow {
     
     if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
       if (this.selectionStart !== null && this.selectionEnd !== null) {
-        // Only restore if the content length hasn't changed
         if (el.value.length === this.lastContentLength) {
           setTimeout(() => {
             el.selectionStart = this.selectionStart;
@@ -443,7 +443,6 @@ export class ChatWindow {
     const el = event.target;
     if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
       this.storeSelectionData();
-      // Store the content length at the time of focus out
       this.lastContentLength = el.value.length;
     }
   }
@@ -451,19 +450,29 @@ export class ChatWindow {
   toggleHighlight() {
     this.clearHighlightDivs();
     const el = document.activeElement;
+    
+    if (!this.isValidEditableElement(el)) {
+      return;
+    }
+  
     const selection = window.getSelection();
     if (el?.tagName === "TEXTAREA") {
       this.highlightTextareaSelection(el);
     } else if (selection?.rangeCount > 0 && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
       const commonAncestor = range.commonAncestorContainer;
-      const isInContentEditable = commonAncestor.nodeType === Node.ELEMENT_NODE ? 
-        commonAncestor.isContentEditable || commonAncestor.closest('[contenteditable="true"]') :
-        commonAncestor.parentElement?.isContentEditable || commonAncestor.parentElement?.closest('[contenteditable="true"]');
-      if (isInContentEditable) {
+
+      const isInContentEditable = (node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.contentEditable === 'true') return true;
+          const editableParent = node.closest('[contenteditable="true"], td[contenteditable="true"], table[contenteditable="true"]');
+          return !!editableParent;
+        }
+        return node.parentElement && isInContentEditable(node.parentElement);
+      };
+  
+      if (isInContentEditable(commonAncestor)) {
         this.highlightContentEditableSelection(range);
-      } else {
-        this.highlightStandardDOMSelection(range);
       }
     }
   }
@@ -612,19 +621,12 @@ export class ChatWindow {
       const end = this.selectionEnd;
       if (start !== null && end !== null && start !== end) {
         const text = el.value;
-        // Update the element's value
         el.value = text.slice(0, start) + replacementText + text.slice(end);
-        
-        // Update our stored selection positions to reflect the new content
         const newPosition = start + replacementText.length;
         this.selectionStart = newPosition;
         this.selectionEnd = newPosition;
-        
-        // Update the actual element's selection
         el.selectionStart = newPosition;
         el.selectionEnd = newPosition;
-        
-        // Trigger an input event to ensure the change is registered
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } else if (el.contentEditable === 'true' && this.cachedRange) {
@@ -634,13 +636,9 @@ export class ChatWindow {
       range.deleteContents();
       const textNode = document.createTextNode(replacementText);
       range.insertNode(textNode);
-      
-      // Update the cached range to reflect the new content
       this.cachedRange = document.createRange();
       this.cachedRange.selectNodeContents(textNode);
       this.cachedRange.collapse(false);
-      
-      // Update the selection
       sel.removeAllRanges();
       sel.addRange(this.cachedRange);
     }
@@ -715,6 +713,29 @@ export class ChatWindow {
     } else {
       this.caretElement.style.display = "none";
     }
+  }
+
+  isValidEditableElement(element) {
+    if (!element) return false;
+
+    if (element.tagName === 'TEXTAREA' || element.contentEditable === 'true') {
+      return true;
+    }
+
+    const editableParent = element.closest('[contenteditable="true"], td[contenteditable="true"], div[contenteditable="true"], table[contenteditable="true"]');
+    if (editableParent) {
+      return true;
+    }
+
+    const tableCell = element.closest('td');
+    if (tableCell) {
+      const table = tableCell.closest('table');
+      if (table && (table.contentEditable === 'true' || table.closest('[contenteditable="true"]'))) {
+        return true;
+      }
+    }
+  
+    return false;
   }
 
   showAtElement() {
