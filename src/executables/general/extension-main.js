@@ -1,9 +1,10 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 
-import { SlashCommand } from '../../classes/general/SlashCommand.js';
-import { Tooltip } from '../../classes/general/Tooltip.js';
-import { Underline } from '../../classes/general/Underline.js';
+import { Pill } from '../../classes/general/Pill.js'
+import { SlashCommand } from '../../classes/general/SlashCommand.js'
+import { Tooltip } from '../../classes/general/Tooltip.js'
+import { Underline } from '../../classes/general/Underline.js'
 
 function initializeExtension() {
   let activeElement = null
@@ -16,6 +17,10 @@ function initializeExtension() {
   const tooltip = new Tooltip()
   const slashCommand = new SlashCommand()
   let observer = null
+  let tooltipVisible = false
+  let lastTooltipId = null
+
+  const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
 
   function debounce(func, wait) {
     let timeout
@@ -33,6 +38,7 @@ function initializeExtension() {
       action: 'fetchData',
       textInput: text
     }).then(response => {
+      console.log('get back from fetch data: ', response);
       if (response.error) {
         return null
       }
@@ -50,7 +56,7 @@ function initializeExtension() {
   }, 1000)
 
   function isEditableElement(element) {
-    return element && (element instanceof HTMLTextAreaElement || element.isContentEditable);
+    return element && (element instanceof HTMLTextAreaElement || element.isContentEditable)
   }
 
   function getCaretPosition(element) {
@@ -71,54 +77,54 @@ function initializeExtension() {
 
   function getCursorRect(element, position) {
     if (element instanceof HTMLTextAreaElement) {
-        const mirror = document.createElement('div');
-        const computedStyle = window.getComputedStyle(element);
-        for (const key of computedStyle) {
-            mirror.style[key] = computedStyle[key];
-        }
-        mirror.style.position = 'absolute';
-        mirror.style.visibility = 'hidden';
-        mirror.style.whiteSpace = 'pre-wrap';
-        mirror.style.wordWrap = 'break-word';
-        mirror.style.overflow = 'hidden';
-        mirror.style.width = element.offsetWidth + 'px';
-        const textBeforeSlash = element.value.substring(0, position + 1);
-        mirror.textContent = textBeforeSlash;
-        const measureSpan = document.createElement('span');
-        measureSpan.textContent = '|';
-        mirror.appendChild(measureSpan);
-        document.body.appendChild(mirror);
-        const elementRect = element.getBoundingClientRect();
-        const spanRect = measureSpan.getBoundingClientRect();
-        const mirrorRect = mirror.getBoundingClientRect();
-        const coords = {
-            left: elementRect.left + (spanRect.left - mirrorRect.left),
-            top: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height,
-            bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
-        };
-        document.body.removeChild(mirror);
-        return coords;
+      const mirror = document.createElement('div')
+      const computedStyle = window.getComputedStyle(element)
+      for (const key of computedStyle) {
+        mirror.style[key] = computedStyle[key]
+      }
+      mirror.style.position = 'absolute'
+      mirror.style.visibility = 'hidden'
+      mirror.style.whiteSpace = 'pre-wrap'
+      mirror.style.wordWrap = 'break-word'
+      mirror.style.overflow = 'hidden'
+      mirror.style.width = element.offsetWidth + 'px'
+      const textBeforeSlash = element.value.substring(0, position + 1)
+      mirror.textContent = textBeforeSlash
+      const measureSpan = document.createElement('span')
+      measureSpan.textContent = '|'
+      mirror.appendChild(measureSpan)
+      document.body.appendChild(mirror)
+      const elementRect = element.getBoundingClientRect()
+      const spanRect = measureSpan.getBoundingClientRect()
+      const mirrorRect = mirror.getBoundingClientRect()
+      const coords = {
+        left: elementRect.left + (spanRect.left - mirrorRect.left),
+        top: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height,
+        bottom: elementRect.top + (spanRect.top - mirrorRect.top) + spanRect.height
+      }
+      document.body.removeChild(mirror)
+      return coords
     } else if (element.isContentEditable) {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return null;
-        const range = sel.getRangeAt(0).cloneRange();
-        range.collapse(true);
-        const span = document.createElement('span');
-        span.textContent = '\u200b';
-        span.style.position = 'absolute';
-        span.style.opacity = '0';
-        range.insertNode(span);
-        const rect = span.getBoundingClientRect();
-        const elementStyles = window.getComputedStyle(element);
-        const paddingLeft = parseFloat(elementStyles.paddingLeft) || 0;
-        span.remove();
-        return {
-            left: rect.left - paddingLeft,
-            top: rect.top,
-            bottom: rect.bottom
-        };
+      const sel = window.getSelection()
+      if (!sel.rangeCount) return null
+      const range = sel.getRangeAt(0).cloneRange()
+      range.collapse(true)
+      const span = document.createElement('span')
+      span.textContent = '\u200b'
+      span.style.position = 'absolute'
+      span.style.opacity = '0'
+      range.insertNode(span)
+      const rect = span.getBoundingClientRect()
+      const elementStyles = window.getComputedStyle(element)
+      const paddingLeft = parseFloat(elementStyles.paddingLeft) || 0
+      span.remove()
+      return {
+        left: rect.left - paddingLeft,
+        top: rect.top,
+        bottom: rect.bottom
+      }
     }
-    return null;
+    return null
   }
 
   function detectSlashCommand(e) {
@@ -132,10 +138,7 @@ function initializeExtension() {
       if (typedCommand.length <= 30) {
         const rect = getCursorRect(activeElement, slashIndex)
         slashCommand.currentInput = typedCommand
-        slashCommand.showSlashCommands(
-          { left: rect.left, top: rect.top, bottom: rect.bottom },
-          typedCommand
-        )
+        slashCommand.showSlashCommands({ left: rect.left, top: rect.top, bottom: rect.bottom }, typedCommand)
       } else {
         slashCommand.hideSlashCommandUI()
       }
@@ -145,46 +148,43 @@ function initializeExtension() {
   }
 
   function handleInput(e) {
-    if (!isEditableElement(e.target)) return;
+    if (!isEditableElement(e.target)) return
     if (activeElement !== e.target) {
-      underline.clearUnderlines(activeElement);
-      activeElement = e.target;
+      underline.clearUnderlines(activeElement)
+      activeElement = e.target
       if (observer) {
-        observer.disconnect();
+        observer.disconnect()
       }
       observer = new MutationObserver(() => {
-        if (!activeElement) return;
-        let mutationTimeout = null;
-        clearTimeout(mutationTimeout);
+        if (!activeElement) return
+        let mutationTimeout = null
+        clearTimeout(mutationTimeout)
         mutationTimeout = setTimeout(() => {
-          debouncedApiUpdate();
-        }, 100);
-      });
-      
+          debouncedApiUpdate()
+        }, 100)
+      })
       const observerConfig = {
         childList: true,
         subtree: true,
         characterData: true,
         attributes: true,
         attributeFilter: ['style', 'class', 'width', 'height']
-      };
-      
+      }
       if (activeElement instanceof HTMLTextAreaElement) {
-        observer.observe(activeElement, { attributes: true });
+        observer.observe(activeElement, { attributes: true })
       } else if (activeElement.isContentEditable) {
-        observer.observe(activeElement, observerConfig);
+        observer.observe(activeElement, observerConfig)
       }
     }
-    
-    isTyping = true;
-    clearTimeout(typeTimeout);
+    isTyping = true
+    clearTimeout(typeTimeout)
     typeTimeout = setTimeout(() => {
       if (activeElement === e.target) {
-        isTyping = false;
-        debouncedApiUpdate();
+        isTyping = false
+        debouncedApiUpdate()
       }
-    }, 2000);
-    detectSlashCommand(e);
+    }, 2000)
+    detectSlashCommand(e)
   }
 
   document.addEventListener('input', handleInput)
@@ -192,10 +192,7 @@ function initializeExtension() {
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === '/') {
       if (!activeElement) return
-      const cursorRect = getCursorRect(
-        activeElement,
-        getCaretPosition(activeElement)
-      )
+      const cursorRect = getCursorRect(activeElement, getCaretPosition(activeElement))
       if (cursorRect) {
         slashCommand.isActive = true
         slashCommand.showSlashCommands(cursorRect)
@@ -210,9 +207,7 @@ function initializeExtension() {
         slashCommand.updateSelectedIndex(1)
         e.preventDefault()
       } else if (e.key === 'Enter') {
-        const selectedOption = slashCommand.slashCommandUI.children[
-          slashCommand.selectedIndex
-        ]
+        const selectedOption = slashCommand.slashCommandUI.children[slashCommand.selectedIndex]
         if (selectedOption) {
           const command = selectedOption.querySelector('span').textContent
           slashCommand.selectCommand(command)
@@ -228,7 +223,6 @@ function initializeExtension() {
   function handleMouseMove(e) {
     clearTimeout(tooltipHideTimeout);
     if (!activeElement) return;
-    
     const elementsFromPoint = document.elementsFromPoint(e.clientX, e.clientY);
     const foundHighlight = Array.from(
       underline.overlay.getElementsByClassName('word-highlight')
@@ -242,65 +236,34 @@ function initializeExtension() {
         e.clientY <= rect.bottom + buffer
       );
     });
-  
     const isOverTooltip = elementsFromPoint.some(el => el.closest('.precise-tooltip'));
-    
     if ((foundHighlight || isOverTooltip) && activeElement) {
-      let element;
       if (foundHighlight) {
         const correctionId = foundHighlight.dataset.correctionId;
         const correctionGroups = underline.underlines.get(activeElement);
-        const correctionGroup = correctionGroups?.find(
-          group => group.correctionId === correctionId
-        );
-        
-        element = correctionGroup || null;
-        if (element) {
-          currentHoverElement = element;
-
-          if (activeElement.isContentEditable && !element.boundingRect) {
-            const highlightRect = foundHighlight.getBoundingClientRect();
-            element.boundingRect = {
-              top: highlightRect.top,
-              left: highlightRect.left,
-              right: highlightRect.right,
-              bottom: highlightRect.bottom,
-              width: highlightRect.width,
-              height: highlightRect.height
-            };
+        const correctionGroup = correctionGroups?.find(group => group.correctionId === correctionId);
+        if (correctionGroup) {
+          currentHoverElement = correctionGroup;
+          if (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== correctionId) {
+            if (hoveredUnderline) {
+              underline.removeHoverEffect(activeElement, hoveredUnderline);
+            }
+            underline.addHoverEffect(activeElement, foundHighlight);
+            hoveredUnderline = foundHighlight;
           }
-        }
-      } else if (isOverTooltip && currentHoverElement) {
-        element = currentHoverElement;
-      }
-  
-      if (element) {
-        if (
-          foundHighlight &&
-          (!hoveredUnderline || hoveredUnderline.dataset.correctionId !== foundHighlight.dataset.correctionId)
-        ) {
-          if (hoveredUnderline) {
-            underline.removeHoverEffect(activeElement, hoveredUnderline);
+          if (!tooltipVisible || lastTooltipId !== correctionId) {
+            lastTooltipId = correctionId;
+            tooltipVisible = true;
+            const boundingRect = underline.getBoundingRectForCorrection(correctionId);
+            if (boundingRect) {
+              tooltip.showTooltip(
+                boundingRect,
+                correctionGroup.errorType,
+                correctionGroup.correctedText,
+                correctionGroup.citations
+              );
+            }
           }
-          underline.addHoverEffect(activeElement, foundHighlight);
-          hoveredUnderline = foundHighlight;
-        }
-
-        if (activeElement.isContentEditable && foundHighlight) {
-          const highlightRect = foundHighlight.getBoundingClientRect();
-          tooltip.showTooltip(
-            highlightRect,
-            element.errorType,
-            element.correctedText,
-            element.citations
-          );
-        } else if (element.boundingRect) {
-          tooltip.showTooltip(
-            element.boundingRect,
-            element.errorType,
-            element.correctedText,
-            element.citations
-          );
         }
       }
     } else {
@@ -310,7 +273,6 @@ function initializeExtension() {
         e.clientX <= tooltipBounds.right + 5 &&
         e.clientY >= tooltipBounds.top - 5 &&
         e.clientY <= tooltipBounds.bottom + 5;
-  
       if (!isMouseNearTooltip) {
         tooltipHideTimeout = setTimeout(() => {
           if (hoveredUnderline) {
@@ -318,6 +280,8 @@ function initializeExtension() {
             hoveredUnderline = null;
           }
           currentHoverElement = null;
+          lastTooltipId = null;
+          tooltipVisible = false;
           tooltip.hideTooltip();
         }, 100);
       }
@@ -335,6 +299,8 @@ function initializeExtension() {
           hoveredUnderline = null
         }
         currentHoverElement = null
+        lastTooltipId = null
+        tooltipVisible = false
         tooltip.hideTooltip()
       }, 100)
     }
@@ -345,122 +311,108 @@ function initializeExtension() {
   tooltip.getElement().addEventListener('mouseleave', handleMouseLeave)
 
   tooltip.getElement().addEventListener('click', async e => {
-    if (!activeElement || !hoveredUnderline) return;
-    const correctionId = hoveredUnderline.dataset.correctionId;
+    if (!activeElement || !hoveredUnderline) return
+    const correctionId = hoveredUnderline.dataset.correctionId
     const correctionGroup = underline.underlines.get(activeElement)?.find(
       group => group.correctionId === correctionId
-    );
-    
+    )
     if (correctionGroup) {
       try {
         const differences = underline.findTextDifferences(
           correctionGroup.originalText,
           correctionGroup.correctedText
-        );
-        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText);
-        
+        )
+        const startIndex = underline.findTextPosition(activeElement, correctionGroup.originalText)
         if (startIndex !== -1) {
-          const diffStartIndex = startIndex + differences.oldStart;
-          const diffEndIndex = startIndex + differences.oldEnd;
-          const hadFocus = document.activeElement === activeElement;
-          
+          const diffStartIndex = startIndex + differences.oldStart
+          const diffEndIndex = startIndex + differences.oldEnd
+          const hadFocus = document.activeElement === activeElement
           if (activeElement instanceof HTMLTextAreaElement) {
-            const currentText = activeElement.value;
-            const beforeText = currentText.substring(0, diffStartIndex);
-            const afterText = currentText.substring(diffEndIndex);
-            activeElement.value = beforeText + differences.newDiff + afterText;
-            
+            const currentText = activeElement.value
+            const beforeText = currentText.substring(0, diffStartIndex)
+            const afterText = currentText.substring(diffEndIndex)
+            activeElement.value = beforeText + differences.newDiff + afterText
             if (hadFocus) {
-              activeElement.focus();
+              activeElement.focus()
               activeElement.setSelectionRange(
                 diffStartIndex + differences.newDiff.length,
                 diffStartIndex + differences.newDiff.length
-              );
+              )
             }
           } else if (activeElement.isContentEditable) {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            let textNode = null;
-            
+            const selection = window.getSelection()
+            const range = document.createRange()
+            let textNode = null
             const walker = document.createTreeWalker(
               activeElement,
               NodeFilter.SHOW_TEXT,
               null,
               false
-            );
-            
-            let currentPos = 0;
+            )
+            let currentPos = 0
             while ((textNode = walker.nextNode()) !== null) {
-              const nodeLength = textNode.length;
+              const nodeLength = textNode.length
               if (currentPos <= diffStartIndex && diffStartIndex < currentPos + nodeLength) {
-                const localStart = diffStartIndex - currentPos;
-                const localEnd = Math.min(diffEndIndex - currentPos, nodeLength);
-                range.setStart(textNode, localStart);
-                range.setEnd(textNode, localEnd);
-                break;
+                const localStart = diffStartIndex - currentPos
+                const localEnd = Math.min(diffEndIndex - currentPos, nodeLength)
+                range.setStart(textNode, localStart)
+                range.setEnd(textNode, localEnd)
+                break
               }
-              currentPos += nodeLength;
+              currentPos += nodeLength
             }
-            
             if (textNode) {
-              range.deleteContents();
-              const newTextNode = document.createTextNode(differences.newDiff);
-              range.insertNode(newTextNode);
-              
+              range.deleteContents()
+              const newTextNode = document.createTextNode(differences.newDiff)
+              range.insertNode(newTextNode)
               if (hadFocus) {
-                const newRange = document.createRange();
-                newRange.setStartAfter(newTextNode);
-                newRange.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
+                const newRange = document.createRange()
+                newRange.setStartAfter(newTextNode)
+                newRange.collapse(true)
+                selection.removeAllRanges()
+                selection.addRange(newRange)
               }
             }
           }
-
           correctionGroup.underlines.forEach(underlineEl => {
             if (underlineEl?.parentNode) {
-              underlineEl.style.transform = 'scaleX(0)';
-              setTimeout(() => underlineEl.remove(), 300);
+              underlineEl.style.transform = 'scaleX(0)'
+              setTimeout(() => underlineEl.remove(), 300)
             }
-          });
-          
+          })
           correctionGroup.highlights.forEach(highlight => {
             if (highlight?.parentNode) {
-              highlight.style.opacity = '0';
-              setTimeout(() => highlight.remove(), 300);
+              highlight.style.opacity = '0'
+              setTimeout(() => highlight.remove(), 300)
             }
-          });
-          
-          const existingGroups = underline.underlines.get(activeElement);
+          })
+          const existingGroups = underline.underlines.get(activeElement)
           if (existingGroups) {
             const updatedGroups = existingGroups.filter(
               group => group.correctionId !== correctionId
-            );
+            )
             if (updatedGroups.length > 0) {
-              underline.underlines.set(activeElement, updatedGroups);
+              underline.underlines.set(activeElement, updatedGroups)
             } else {
-              underline.underlines.delete(activeElement);
+              underline.underlines.delete(activeElement)
             }
           }
-          
-          tooltip.hideTooltip();
-          underline.removeHoverEffect(activeElement, hoveredUnderline);
-          hoveredUnderline = null;
-
+          tooltip.hideTooltip()
+          underline.removeHoverEffect(activeElement, hoveredUnderline)
+          hoveredUnderline = null
           const inputEvent = new InputEvent('input', {
             bubbles: true,
             cancelable: true,
             inputType: 'insertText',
             data: differences.newDiff
-          });
-          activeElement.dispatchEvent(inputEvent);
-          
+          })
+          activeElement.dispatchEvent(inputEvent)
           setTimeout(() => {
-            debouncedApiUpdate();
-          }, 500);
+            debouncedApiUpdate()
+          }, 500)
         }
       } catch (error) {
-        console.error('Error applying correction:', error);
+        console.log('error clicking tooltip: ', error)
       }
     }
   })
@@ -473,4 +425,4 @@ function initializeExtension() {
   })
 }
 
-document.addEventListener('DOMContentLoaded', initializeExtension);
+document.addEventListener('DOMContentLoaded', initializeExtension)

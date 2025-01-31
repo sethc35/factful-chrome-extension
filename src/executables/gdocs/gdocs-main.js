@@ -1,7 +1,66 @@
-/* eslint-disable no-unused-vars */ 
-
 export function initializeGDocsTracker() {
   window._docs_annotate_canvas_by_ext = "kbfnbcaeplbcioakkpcpgfkobkghlhen";
+
+  function createAuthForm() {
+    const formContainer = document.createElement('div');
+    formContainer.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 10000;
+    `;
+
+    const trustedHTML = new TrustedHTML(`
+      <h2 style="margin-bottom: 20px;">Sign In</h2>
+      <form id="auth-form">
+        <div style="margin-bottom: 15px;">
+          <input type="email" id="email" placeholder="Email" style="
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+          ">
+        </div>
+        <div style="margin-bottom: 15px;">
+          <input type="password" id="password" placeholder="Password" style="
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+          ">
+        </div>
+        <button type="submit" style="
+          width: 100%;
+          padding: 10px;
+          background: #0070f3;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        ">Sign In</button>
+        <button type="button" id="google-signin" style="
+          width: 100%;
+          padding: 10px;
+          margin-top: 10px;
+          background: #fff;
+          color: #757575;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          cursor: pointer;
+        ">Sign in with Google</button>
+      </form>
+    `);
+
+    formContainer.setHTML(trustedHTML);
+    return formContainer;
+  }
 
   function waitForEditorReady(callback) {
     const observer = new MutationObserver(() => {
@@ -44,6 +103,8 @@ export function initializeGDocsTracker() {
     const underline = new Underline();
     const slashCommand = new SlashCommand();
     let apiData = await ApiService.fetchDataFromApi();
+    let isSignedIn = false;
+    let accessToken = null;
     let corrections = [];
     {
       const docText = await ApiService.collectTextFromRects();
@@ -52,109 +113,165 @@ export function initializeGDocsTracker() {
       underline.applyUnderlines(corrections, true);
     }
 
+    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+    async function initializeSupabaseAuth() {
+      const authForm = createAuthForm();
+      document.body.appendChild(authForm);
+
+      const form = authForm.querySelector('#auth-form');
+      const googleButton = authForm.querySelector('#google-signin');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = authForm.querySelector('#email').value;
+        const password = authForm.querySelector('#password').value;
+
+        window.postMessage({ 
+          action: 'signInWithPassword',
+          data: { email, password }
+        }, '*');
+      });
+
+      googleButton.addEventListener('click', () => {
+        window.postMessage({ 
+          action: 'signInWithGoogle',
+          data: { redirectUrl }
+        }, '*');
+      });
+
+      window.postMessage({ action: 'getSession' }, '*');
+    }
+
+    function checkUser() {
+      console.log("[Authenticator] Retrieving user session...");
+      if (!isSignedIn) {
+        initializeSupabaseAuth();
+      }
+    }
+
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'authStateChange') {
+        const { event: authEvent, session } = event.data;
+        if (authEvent === 'SIGNED_IN') {
+          isSignedIn = true;
+          accessToken = session.access_token;
+          const authForm = document.querySelector('.auth-container');
+          if (authForm) authForm.remove();
+        } else if (authEvent === 'SIGNED_OUT') {
+          isSignedIn = false;
+          accessToken = null;
+          checkUser();
+        }
+      }
+    });
+
+    checkUser();
+
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,
       getUnderlineElements: () => underline.underlineElements,
       handleCorrection: async (correction) => {
-          try {
-              const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
-              const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
+        try {
+          const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
+          const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
 
-              const matchingUnderline = underline.underlineElements.find(el => 
-                  el.originalText === correction.originalText && 
-                  el.error_type === correction.error_type
-              );
-  
-              if (!matchingUnderline) {
-                  console.error('No matching underline found for correction');
-                  return;
-              }
+          const matchingUnderline = underline.underlineElements.find(el => 
+            el.originalText === correction.originalText && 
+            el.error_type === correction.error_type
+          );
 
-              const line = matchingUnderline.groupElement.querySelector('line');
-              const svgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
-              const x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
-              const x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
-              const y = svgRect.top + parseFloat(line.getAttribute('y1'));
-
-              const tileManager = document.querySelector('.kix-rotatingtilemanager-content');
-              tileManager.dispatchEvent(new MouseEvent('mousedown', {
-                  bubbles: true,
-                  cancelable: true,
-                  clientX: x1,
-                  clientY: y
-              }));
-              tileManager.dispatchEvent(new MouseEvent('mousemove', {
-                  bubbles: true,
-                  cancelable: true,
-                  clientX: x2,
-                  clientY: y
-              }));
-              tileManager.dispatchEvent(new MouseEvent('mouseup', {
-                  bubbles: true,
-                  cancelable: true,
-                  clientX: x2,
-                  clientY: y
-              }));
-
-              await new Promise(r => setTimeout(r, 50));
-              document.execCommand('delete');
-              await new Promise(r => setTimeout(r, 50));
-
-              const differences = Underline.findTextDifferences(
-                  correction.originalText,
-                  correction.corrected_text
-              );
-  
-              const clipboardData = new DataTransfer();
-              clipboardData.setData('text/plain', differences.newDiff);
-              contentDiv.dispatchEvent(new ClipboardEvent('paste', {
-                  bubbles: true,
-                  cancelable: true,
-                  clipboardData
-              }));
-  
-          } catch (error) {
-              console.error('Error in handleCorrection:', error);
-              throw error;
+          if (!matchingUnderline) {
+            console.error('No matching underline found for correction');
+            return;
           }
+
+          const line = matchingUnderline.groupElement.querySelector('line');
+          const svgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
+          const x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
+          const x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
+          const y = svgRect.top + parseFloat(line.getAttribute('y1'));
+
+          const tileManager = document.querySelector('.kix-rotatingtilemanager-content');
+          tileManager.dispatchEvent(new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            clientX: x1,
+            clientY: y
+          }));
+          tileManager.dispatchEvent(new MouseEvent('mousemove', {
+            bubbles: true,
+            cancelable: true,
+            clientX: x2,
+            clientY: y
+          }));
+          tileManager.dispatchEvent(new MouseEvent('mouseup', {
+            bubbles: true,
+            cancelable: true,
+            clientX: x2,
+            clientY: y
+          }));
+
+          await new Promise(r => setTimeout(r, 50));
+          document.execCommand('delete');
+          await new Promise(r => setTimeout(r, 50));
+
+          const differences = Underline.findTextDifferences(
+            correction.originalText,
+            correction.corrected_text
+          );
+
+          const clipboardData = new DataTransfer();
+          clipboardData.setData('text/plain', differences.newDiff);
+          contentDiv.dispatchEvent(new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData
+          }));
+
+        } catch (error) {
+          console.error('Error in handleCorrection:', error);
+          throw error;
+        }
       },
       handleHighlight: (correction, isHovering) => {
         const matchingUnderlines = underline.underlineElements.filter(el => 
-            el.originalText === correction.originalText && 
-            el.error_type === correction.error_type
+          el.originalText === correction.originalText && 
+          el.error_type === correction.error_type
         );
 
         matchingUnderlines.forEach(el => {
-            const groupElement = el.groupElement;
-            const highlightRect = groupElement.querySelector('rect');
-            const line = groupElement.querySelector('line');
+          const groupElement = el.groupElement;
+          const highlightRect = groupElement.querySelector('rect');
+          const line = groupElement.querySelector('line');
 
-            if (isHovering) {
-                const hoverColor = el.error_type === 'Grammar' 
-                    ? 'rgba(255, 99, 71, 0.7)' 
-                    : 'rgba(173, 216, 230, 0.7)';
+          if (isHovering) {
+            const hoverColor = el.error_type === 'Grammar' 
+              ? 'rgba(255, 99, 71, 0.7)' 
+              : 'rgba(173, 216, 230, 0.7)';
 
-                highlightRect.setAttribute('fill', hoverColor);
-                line.setAttribute('stroke-width', '3');
-                line.setAttribute('stroke-opacity', '1');
-                line.setAttribute('stroke', el.error_type === 'Grammar' 
-                    ? '#B01030' 
-                    : '#003C6B'
-                );
+            highlightRect.setAttribute('fill', hoverColor);
+            line.setAttribute('stroke-width', '3');
+            line.setAttribute('stroke-opacity', '1');
+            line.setAttribute('stroke', el.error_type === 'Grammar' 
+              ? '#B01030' 
+              : '#003C6B'
+            );
 
-                el.isHovered = true;
-            } else {
-                highlightRect.setAttribute('fill', el.defaultColor);
-                
-                line.setAttribute('stroke-width', '2');
-                line.setAttribute('stroke-opacity', '0.8');
-                line.setAttribute('stroke', el.error_type === 'Grammar' 
-                    ? '#FF6347' 
-                    : '#4682B4'
-                );
+            el.isHovered = true;
+          } else {
+            highlightRect.setAttribute('fill', el.defaultColor);
+            
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('stroke-opacity', '0.8');
+            line.setAttribute('stroke', el.error_type === 'Grammar' 
+              ? '#FF6347' 
+              : '#4682B4'
+            );
 
-                el.isHovered = false;
-            }
+            el.isHovered = false;
+          }
         });
       }
     });

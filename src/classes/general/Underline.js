@@ -7,6 +7,7 @@ export class Underline {
     this.isProcessing = false
     this.overlay = null
     this.fieldContainers = new Map()
+    this.scrollingParents = new Map()
     this.intersectionObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -20,18 +21,38 @@ export class Underline {
       })
     })
     this.handleScroll = this.handleScroll.bind(this)
-    this.handleScrollGlobal = this.handleScrollGlobal.bind(this);
+    this.handleScrollGlobal = this.handleScrollGlobal.bind(this)
     this.addStyles()
     this.createOverlay()
-    window.addEventListener('scroll', this.handleScrollGlobal, { passive: true });
+    window.addEventListener('scroll', this.handleScrollGlobal, { capture: true })
+  }
+
+  getBoundingRectForCorrection(correctionId) {
+    const elements = this.overlay.querySelectorAll(`[data-correction-id="${correctionId}"]`);
+    if (!elements.length) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    elements.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      minX = Math.min(minX, rect.left);
+      minY = Math.min(minY, rect.top);
+      maxX = Math.max(maxX, rect.right);
+      maxY = Math.max(maxY, rect.bottom);
+    });
+    return {
+      left: minX,
+      top: minY,
+      right: maxX,
+      bottom: maxY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
   }
 
   handleScrollGlobal() {
     this.underlines.forEach((_, element) => {
-      this.updateUnderlinePositions(element);
-    });
+      this.updateUnderlinePositions(element)
+    })
   }
-
 
   handleScroll(event) {
     this.updateUnderlinePositions(event.target)
@@ -70,7 +91,7 @@ export class Underline {
       }
       .word-highlight {
         position: absolute;
-        pointer-events: auto;
+        pointer-events: none;
         transition: opacity 0.2s ease-out, background-color 0.2s ease-out;
         will-change: transform, opacity;
         opacity: 0;
@@ -118,7 +139,8 @@ export class Underline {
     const container = document.createElement('div')
     container.style.position = 'absolute'
     container.style.pointerEvents = 'none'
-    container.style.zIndex = '2147483645'
+    const z = parseInt(window.getComputedStyle(element).zIndex, 10) || 0
+    container.style.zIndex = z + 1
     this.overlay.appendChild(container)
     this.fieldContainers.set(element, container)
     return container
@@ -193,7 +215,6 @@ export class Underline {
     relevantStyles.forEach(style => {
       mirror.style[style] = styles[style]
     })
-
     mirror.style.position = 'absolute'
     mirror.style.top = '0'
     mirror.style.left = '0'
@@ -203,15 +224,30 @@ export class Underline {
     mirror.style.visibility = 'hidden'
     mirror.style.overflow = 'auto'
     mirror.style.wordWrap = 'break-word'
-    
     return mirror
   }
 
   observeElement(element) {
     this.intersectionObserver.observe(element)
     this.resizeObserver.observe(element)
-    element.addEventListener('scroll', this.handleScroll, { passive: true })
+    element.addEventListener('scroll', this.handleScroll, { capture: true })
     element.addEventListener('input', this.handleScroll)
+    const parents = []
+    let parent = element.parentNode
+    while (parent && parent !== document) {
+      const style = window.getComputedStyle(parent)
+      if (
+        style.overflow === 'auto' ||
+        style.overflow === 'scroll' ||
+        style.overflowY === 'auto' ||
+        style.overflowY === 'scroll'
+      ) {
+        parents.push(parent)
+        parent.addEventListener('scroll', this.handleScrollGlobal, { capture: true })
+      }
+      parent = parent.parentNode
+    }
+    this.scrollingParents.set(element, parents)
   }
 
   isInViewport(element) {
@@ -225,287 +261,244 @@ export class Underline {
   }
 
   underlineCorrection(element, correction) {
-    const original_text = correction.original_text;
-    const corrected_text = correction.corrected_text;
-    const error_type = correction.error_type;
-    const citations = correction.citations || [];
-    const startIndex = this.findTextPosition(element, original_text);
-    if (startIndex === -1) return;
-
-    const differences = this.findTextDifferences(original_text, corrected_text);
-    requestAnimationFrame(() => {
-      const correctionId = `correction-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const underlineGroup = {
-        underlines: [],
-        highlights: [],
-        originalText: original_text,
-        correctedText: corrected_text,
-        errorType: error_type,
-        citations: citations,
-        correctionId: correctionId,
-        diffInfo: differences,
-        boundingRect: null
-      };
-
-      const container = this.getFieldContainer(element);
-      const elementRect = element.getBoundingClientRect();
-
-      container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`;
-      container.style.width = `${element.offsetWidth}px`;
-      container.style.height = `${element.offsetHeight}px`;
-
-      if (element instanceof HTMLTextAreaElement) {
-        const mirror = this.createMirrorElement(element);
-        mirror.style.overflow = window.getComputedStyle(element).overflow;
-        mirror.style.height = `${element.offsetHeight}px`;
-        mirror.scrollTop = element.scrollTop;
-        mirror.scrollLeft = element.scrollLeft;
-        mirror.offsetHeight; // force reflow
-
-        const textNode = document.createTextNode(element.value);
-        mirror.replaceChildren(textNode);
-        document.body.appendChild(mirror);
-
-        const mirrorRect = mirror.getBoundingClientRect();
-        const diffStartIndex = startIndex + differences.oldStart;
-        const diffEndIndex = startIndex + differences.oldEnd;
-
-        const range = document.createRange();
-        range.setStart(textNode, diffStartIndex);
-        range.setEnd(textNode, diffEndIndex);
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        Array.from(range.getClientRects()).forEach((rect, index) => {
-          const offsetLeft = rect.left - mirrorRect.left;
-          const offsetTop = rect.top - mirrorRect.top;
-
-          const highlight = document.createElement('div');
-          highlight.className = 'word-highlight';
-          highlight.style.cssText = `
-            left: ${offsetLeft}px;
-            top: ${offsetTop}px;
-            width: ${rect.width}px;
-            height: ${rect.height}px;
-          `;
-          highlight.dataset.correctionId = correctionId;
-          container.appendChild(highlight);
-          underlineGroup.highlights.push(highlight);
-
-          highlight.addEventListener('mouseenter', () => this.addHoverEffect(element, highlight));
-          highlight.addEventListener('mouseleave', () => this.removeHoverEffect(element, highlight));
-
-          const underline = document.createElement('div');
-          underline.className = 'precise-underline';
-          underline.style.cssText = `
-            left: ${offsetLeft}px;
-            top: ${offsetTop + rect.height - 2}px;
-            width: ${rect.width}px;
-          `;
-          underline.dataset.correctionId = correctionId;
-
-          setTimeout(() => underline.classList.add('animate'), index * 50);
-          container.appendChild(underline);
-          underlineGroup.underlines.push(underline);
-
-          const absoluteLeft = elementRect.left + (rect.left - mirrorRect.left);
-          const absoluteTop = elementRect.top + (rect.top - mirrorRect.top);
-          const absoluteRight = elementRect.left + (rect.right - mirrorRect.left);
-          const absoluteBottom = elementRect.top + (rect.bottom - mirrorRect.top);
-
-          if (absoluteLeft < minX) minX = absoluteLeft;
-          if (absoluteTop < minY) minY = absoluteTop;
-          if (absoluteRight > maxX) maxX = absoluteRight;
-          if (absoluteBottom > maxY) maxY = absoluteBottom;
-        });
-
-        if (minX < maxX && minY < maxY) {
-          underlineGroup.boundingRect = {
-            top: minY,
-            left: minX,
-            right: maxX,
-            bottom: maxY,
-            width: maxX - minX,
-            height: maxY - minY
-          };
+    const original_text = correction.original_text
+    const corrected_text = correction.corrected_text
+    const error_type = correction.error_type
+    const citations = correction.citations || []
+    const startIndex = this.findTextPosition(element, original_text)
+    if (startIndex === -1) return
+    const differences = this.findTextDifferences(original_text, corrected_text)
+    const correctionId = `correction-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const underlineGroup = {
+      underlines: [],
+      highlights: [],
+      originalText: original_text,
+      correctedText: corrected_text,
+      errorType: error_type,
+      citations: citations,
+      correctionId: correctionId,
+      diffInfo: differences,
+      boundingRect: null
+    }
+    const container = this.getFieldContainer(element)
+    const elementRect = element.getBoundingClientRect()
+    container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`
+    container.style.width = `${element.offsetWidth}px`
+    container.style.height = `${element.offsetHeight}px`
+    if (element instanceof HTMLTextAreaElement) {
+      const mirror = this.createMirrorElement(element)
+      mirror.style.overflow = window.getComputedStyle(element).overflow
+      mirror.style.height = `${element.offsetHeight}px`
+      mirror.scrollTop = element.scrollTop
+      mirror.scrollLeft = element.scrollLeft
+      mirror.offsetHeight
+      const textNode = document.createTextNode(element.value)
+      mirror.replaceChildren(textNode)
+      document.body.appendChild(mirror)
+      const mirrorRect = mirror.getBoundingClientRect()
+      const diffStartIndex = startIndex + differences.oldStart
+      const diffEndIndex = startIndex + differences.oldEnd
+      const range = document.createRange()
+      range.setStart(textNode, diffStartIndex)
+      range.setEnd(textNode, diffEndIndex)
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+      Array.from(range.getClientRects()).forEach((rect, index) => {
+        const offsetLeft = rect.left - mirrorRect.left
+        const offsetTop = rect.top - mirrorRect.top
+        const highlight = document.createElement('div')
+        highlight.className = 'word-highlight'
+        highlight.style.cssText = `
+          left: ${offsetLeft}px;
+          top: ${offsetTop}px;
+          width: ${rect.width}px;
+          height: ${rect.height}px;
+        `
+        highlight.dataset.correctionId = correctionId
+        container.appendChild(highlight)
+        underlineGroup.highlights.push(highlight)
+        highlight.addEventListener('mouseenter', () => this.addHoverEffect(element, highlight))
+        highlight.addEventListener('mouseleave', () => this.removeHoverEffect(element, highlight))
+        const underline = document.createElement('div')
+        underline.className = 'precise-underline'
+        underline.style.cssText = `
+          left: ${offsetLeft}px;
+          top: ${offsetTop + rect.height - 2}px;
+          width: ${rect.width}px;
+        `
+        underline.dataset.correctionId = correctionId
+        setTimeout(() => underline.classList.add('animate'), index * 50)
+        container.appendChild(underline)
+        underlineGroup.underlines.push(underline)
+        const absoluteLeft = elementRect.left + (rect.left - mirrorRect.left)
+        const absoluteTop = elementRect.top + (rect.top - mirrorRect.top)
+        const absoluteRight = elementRect.left + (rect.right - mirrorRect.left)
+        const absoluteBottom = elementRect.top + (rect.bottom - mirrorRect.top)
+        if (absoluteLeft < minX) minX = absoluteLeft
+        if (absoluteTop < minY) minY = absoluteTop
+        if (absoluteRight > maxX) maxX = absoluteRight
+        if (absoluteBottom > maxY) maxY = absoluteBottom
+      })
+      if (minX < maxX && minY < maxY) {
+        underlineGroup.boundingRect = {
+          top: minY,
+          left: minX,
+          right: maxX,
+          bottom: maxY,
+          width: maxX - minX,
+          height: maxY - minY
         }
-
-        document.body.removeChild(mirror);
       }
-
-      const existingGroups = this.underlines.get(element) || [];
-      existingGroups.push(underlineGroup);
-      this.underlines.set(element, existingGroups);
-      this.observeElement(element);
-    });
+      document.body.removeChild(mirror)
+    }
+    const existingGroups = this.underlines.get(element) || []
+    existingGroups.push(underlineGroup)
+    this.underlines.set(element, existingGroups)
+    this.observeElement(element)
   }
 
   updateUnderlinePositions(element) {
-    if (!this.underlines.has(element)) return;
-    const groups = this.underlines.get(element);
-    if (!groups.length) return;
-  
-    requestAnimationFrame(() => {
-      const elementRect = element.getBoundingClientRect();
-      const container = this.getFieldContainer(element);
-      const toRemove = new Set();
-  
-      container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`;
-      container.style.width = `${element.offsetWidth}px`;
-      container.style.height = `${element.offsetHeight}px`;
-  
-      if (element instanceof HTMLTextAreaElement) {
-        const mirror = this.createMirrorElement(element);
-        const textNode = document.createTextNode(element.value);
-        mirror.appendChild(textNode);
-        document.body.appendChild(mirror);
-  
-        groups.forEach((group, groupIndex) => {
-          const startIndex = this.findTextPosition(element, group.originalText);
-          if (startIndex === -1) {
-            toRemove.add(groupIndex);
-            return;
+    if (!this.underlines.has(element)) return
+    const groups = this.underlines.get(element)
+    if (!groups.length) return
+    const elementRect = element.getBoundingClientRect()
+    const container = this.getFieldContainer(element)
+    const toRemove = new Set()
+    container.style.transform = `translate3d(${elementRect.left}px, ${elementRect.top}px, 0)`
+    container.style.width = `${element.offsetWidth}px`
+    container.style.height = `${element.offsetHeight}px`
+    if (element instanceof HTMLTextAreaElement) {
+      const mirror = this.createMirrorElement(element)
+      const textNode = document.createTextNode(element.value)
+      mirror.appendChild(textNode)
+      document.body.appendChild(mirror)
+      groups.forEach((group, groupIndex) => {
+        const startIndex = this.findTextPosition(element, group.originalText)
+        if (startIndex === -1) {
+          toRemove.add(groupIndex)
+          return
+        }
+        const diffStartIndex = startIndex + group.diffInfo.oldStart
+        const diffEndIndex = startIndex + group.diffInfo.oldEnd
+        try {
+          const range = document.createRange()
+          range.setStart(textNode, diffStartIndex)
+          range.setEnd(textNode, diffEndIndex)
+          group.underlines.forEach(u => u.remove())
+          group.highlights.forEach(h => h.remove())
+          group.underlines = []
+          group.highlights = []
+          const scrollContainer = document.createElement('div')
+          scrollContainer.className = 'scroll-container'
+          container.appendChild(scrollContainer)
+          const scrollContent = document.createElement('div')
+          scrollContent.className = 'scroll-content'
+          scrollContent.style.transform = `translate3d(0, ${-element.scrollTop}px, 0)`
+          scrollContainer.appendChild(scrollContent)
+          Array.from(range.getClientRects()).forEach((rect, i) => {
+            const offsetLeft = rect.left - mirror.getBoundingClientRect().left
+            const offsetTop = rect.top - mirror.getBoundingClientRect().top
+            const highlight = document.createElement('div')
+            highlight.className = 'word-highlight'
+            highlight.style.left = `${offsetLeft}px`
+            highlight.style.top = `${offsetTop}px`
+            highlight.style.width = `${rect.width}px`
+            highlight.style.height = `${rect.height}px`
+            highlight.dataset.correctionId = group.correctionId
+            scrollContent.appendChild(highlight)
+            group.highlights.push(highlight)
+            const underline = document.createElement('div')
+            underline.className = 'precise-underline'
+            underline.style.left = `${offsetLeft}px`
+            underline.style.top = `${offsetTop + rect.height - 2}px`
+            underline.style.width = `${rect.width}px`
+            underline.dataset.correctionId = group.correctionId
+            scrollContent.appendChild(underline)
+            group.underlines.push(underline)
+          })
+        } catch (e) {
+          toRemove.add(groupIndex)
+        }
+      })
+      document.body.removeChild(mirror)
+    } else if (element.isContentEditable) {
+      groups.forEach((group, groupIndex) => {
+        const treeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+        let text = ''
+        const textNodes = []
+        let currentNode
+        while ((currentNode = treeWalker.nextNode())) {
+          textNodes.push(currentNode)
+          text += currentNode.textContent
+        }
+        const startIndex = text.indexOf(group.originalText)
+        if (startIndex === -1) {
+          toRemove.add(groupIndex)
+          return
+        }
+        let currentLength = 0
+        let startNode
+        let endNode
+        let startOffset
+        let endOffset
+        for (let i = 0; i < textNodes.length; i++) {
+          const nodeLength = textNodes[i].textContent.length
+          if (!startNode && startIndex >= currentLength && startIndex < currentLength + nodeLength) {
+            startNode = textNodes[i]
+            startOffset = startIndex - currentLength
           }
-  
-          const diffStartIndex = startIndex + group.diffInfo.oldStart;
-          const diffEndIndex = startIndex + group.diffInfo.oldEnd;
-  
-          try {
-            const range = document.createRange();
-            range.setStart(textNode, diffStartIndex);
-            range.setEnd(textNode, diffEndIndex);
-  
-            group.underlines.forEach(u => u.remove());
-            group.highlights.forEach(h => h.remove());
-            group.underlines = [];
-            group.highlights = [];
-  
-            const scrollContainer = document.createElement('div');
-            scrollContainer.className = 'scroll-container';
-            container.appendChild(scrollContainer);
-  
-            const scrollContent = document.createElement('div');
-            scrollContent.className = 'scroll-content';
-            scrollContent.style.transform = `translate3d(0, ${-element.scrollTop}px, 0)`;
-            scrollContainer.appendChild(scrollContent);
-  
-            Array.from(range.getClientRects()).forEach((rect, index) => {
-              const offsetLeft = rect.left - mirror.getBoundingClientRect().left;
-              const offsetTop = rect.top - mirror.getBoundingClientRect().top;
-  
-              const highlight = document.createElement('div');
-              highlight.className = 'word-highlight';
-              highlight.style.left = `${offsetLeft}px`;
-              highlight.style.top = `${offsetTop}px`;
-              highlight.style.width = `${rect.width}px`;
-              highlight.style.height = `${rect.height}px`;
-              highlight.dataset.correctionId = group.correctionId;
-              scrollContent.appendChild(highlight);
-              group.highlights.push(highlight);
-  
-              const underline = document.createElement('div');
-              underline.className = 'precise-underline';
-              underline.style.left = `${offsetLeft}px`;
-              underline.style.top = `${offsetTop + rect.height - 2}px`;
-              underline.style.width = `${rect.width}px`;
-              underline.dataset.correctionId = group.correctionId;
-              scrollContent.appendChild(underline);
-              group.underlines.push(underline);
-            });
-          } catch (e) {
-            toRemove.add(groupIndex);
+          if (!endNode && startIndex + group.originalText.length <= currentLength + nodeLength) {
+            endNode = textNodes[i]
+            endOffset = startIndex + group.originalText.length - currentLength
           }
-        });
-  
-        document.body.removeChild(mirror);
-      } else if (element.isContentEditable) {
-        groups.forEach((group, groupIndex) => {
-          const treeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-          let text = '';
-          const textNodes = [];
-          let currentNode;
-  
-          while ((currentNode = treeWalker.nextNode())) {
-            textNodes.push(currentNode);
-            text += currentNode.textContent;
-          }
-  
-          const startIndex = text.indexOf(group.originalText);
-          if (startIndex === -1) {
-            toRemove.add(groupIndex);
-            return;
-          }
-  
-          let currentLength = 0;
-          let startNode, endNode, startOffset, endOffset;
-  
-          for (let i = 0; i < textNodes.length; i++) {
-            const nodeLength = textNodes[i].textContent.length;
-            if (!startNode && startIndex >= currentLength && startIndex < currentLength + nodeLength) {
-              startNode = textNodes[i];
-              startOffset = startIndex - currentLength;
-            }
-            if (!endNode && startIndex + group.originalText.length <= currentLength + nodeLength) {
-              endNode = textNodes[i];
-              endOffset = startIndex + group.originalText.length - currentLength;
-            }
-            currentLength += nodeLength;
-          }
-  
-          if (!startNode || !endNode) {
-            toRemove.add(groupIndex);
-            return;
-          }
-  
-          try {
-            const range = document.createRange();
-            range.setStart(startNode, startOffset);
-            range.setEnd(endNode, endOffset);
-  
-            group.underlines.forEach(u => u.remove());
-            group.highlights.forEach(h => h.remove());
-            group.underlines = [];
-            group.highlights = [];
-  
-            Array.from(range.getClientRects()).forEach(rect => {
-              const offsetLeft = rect.left - elementRect.left;
-              const offsetTop = rect.top - elementRect.top;
-  
-              const highlight = document.createElement('div');
-              highlight.className = 'word-highlight';
-              highlight.style.left = `${offsetLeft}px`;
-              highlight.style.top = `${offsetTop}px`;
-              highlight.style.width = `${rect.width}px`;
-              highlight.style.height = `${rect.height}px`;
-              highlight.dataset.correctionId = group.correctionId;
-              container.appendChild(highlight);
-              group.highlights.push(highlight);
-  
-              const underline = document.createElement('div');
-              underline.className = 'precise-underline';
-              underline.style.left = `${offsetLeft}px`;
-              underline.style.top = `${offsetTop + rect.height - 2}px`;
-              underline.style.width = `${rect.width}px`;
-              underline.dataset.correctionId = group.correctionId;
-              container.appendChild(underline);
-              group.underlines.push(underline);
-  
-              highlight.addEventListener('mouseenter', () => this.addHoverEffect(element, highlight));
-              highlight.addEventListener('mouseleave', () => this.removeHoverEffect(element, highlight));
-            });
-          } catch (e) {
-            toRemove.add(groupIndex);
-          }
-        });
-      }
-  
-      Array.from(toRemove).reverse().forEach(index => {
-        const group = groups[index];
-        group.underlines.forEach(underline => underline.remove());
-        group.highlights.forEach(highlight => highlight.remove());
-        groups.splice(index, 1);
-      });
-    });
+          currentLength += nodeLength
+        }
+        if (!startNode || !endNode) {
+          toRemove.add(groupIndex)
+          return
+        }
+        try {
+          const range = document.createRange()
+          range.setStart(startNode, startOffset)
+          range.setEnd(endNode, endOffset)
+          group.underlines.forEach(u => u.remove())
+          group.highlights.forEach(h => h.remove())
+          group.underlines = []
+          group.highlights = []
+          Array.from(range.getClientRects()).forEach((rect, i) => {
+            const offsetLeft = rect.left - elementRect.left
+            const offsetTop = rect.top - elementRect.top
+            const highlight = document.createElement('div')
+            highlight.className = 'word-highlight'
+            highlight.style.left = `${offsetLeft}px`
+            highlight.style.top = `${offsetTop}px`
+            highlight.style.width = `${rect.width}px`
+            highlight.style.height = `${rect.height}px`
+            highlight.dataset.correctionId = group.correctionId
+            container.appendChild(highlight)
+            group.highlights.push(highlight)
+            const underline = document.createElement('div')
+            underline.className = 'precise-underline'
+            underline.style.left = `${offsetLeft}px`
+            underline.style.top = `${offsetTop + rect.height - 2}px`
+            underline.style.width = `${rect.width}px`
+            underline.dataset.correctionId = group.correctionId
+            container.appendChild(underline)
+            group.underlines.push(underline)
+          })
+        } catch (e) {
+          toRemove.add(groupIndex)
+        }
+      })
+    }
+    Array.from(toRemove).reverse().forEach(index => {
+      const group = groups[index]
+      group.underlines.forEach(underline => underline.remove())
+      group.highlights.forEach(highlight => highlight.remove())
+      groups.splice(index, 1)
+    })
   }
 
   addHoverEffect(element, highlight) {
@@ -521,7 +514,7 @@ export class Underline {
       })
     }
   }
-  
+
   removeHoverEffect(element, highlight) {
     const correctionId = highlight.dataset.correctionId
     const correctionGroup = this.underlines.get(element)?.find(
@@ -571,9 +564,15 @@ export class Underline {
       }
       this.fieldContainers.delete(element)
     }
+    if (this.scrollingParents.has(element)) {
+      this.scrollingParents.get(element).forEach(parent => {
+        parent.removeEventListener('scroll', this.handleScrollGlobal, { capture: true })
+      })
+      this.scrollingParents.delete(element)
+    }
     this.intersectionObserver.unobserve(element)
     this.resizeObserver.unobserve(element)
-    element.removeEventListener('scroll', this.handleScroll)
+    element.removeEventListener('scroll', this.handleScroll, { capture: true })
     element.removeEventListener('input', this.handleScroll)
   }
 

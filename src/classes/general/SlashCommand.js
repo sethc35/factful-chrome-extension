@@ -430,38 +430,55 @@ export class SlashCommand {
     }
 
     showSlashCommands(cursorRect, filterText = '') {
-        if (!cursorRect) return
+        if (!cursorRect) return;
         while (this.slashCommandUI.firstChild) {
-            this.slashCommandUI.removeChild(this.slashCommandUI.firstChild)
+            this.slashCommandUI.removeChild(this.slashCommandUI.firstChild);
         }
+        
         const filteredCommands = Object.entries(this.slashCommands).filter(([cmd]) =>
             cmd.toLowerCase().includes(filterText.toLowerCase())
-        )
-
+        );
+    
         filteredCommands.forEach(([cmd, details]) => {
-            const option = this.createSlashCommandOption(cmd, details.description)
-            this.slashCommandUI.appendChild(option)
-        })
+            const option = this.createSlashCommandOption(cmd, details.description);
+            this.slashCommandUI.appendChild(option);
+        });
+    
         if (filteredCommands.length > 0) {
-            const viewportWidth = window.innerWidth
-            const viewportHeight = window.innerHeight
-            const uiRect = this.slashCommandUI.getBoundingClientRect()
-            let left = cursorRect.left
-            let top = cursorRect.bottom + 5
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const uiRect = this.slashCommandUI.getBoundingClientRect();
+            let left = cursorRect.left;
+            let top = cursorRect.bottom + 5;
+            let isAboveCursor = false;
+
+            const spaceBelow = viewportHeight - cursorRect.bottom;
+            const spaceAbove = cursorRect.top;
+            
+            if (spaceBelow < uiRect.height && spaceAbove > uiRect.height) {
+                top = cursorRect.top - uiRect.height - 5;
+                isAboveCursor = true;
+            }
+    
             if (left + uiRect.width > viewportWidth) {
-                left = viewportWidth - uiRect.width - 10
+                left = viewportWidth - uiRect.width - 10;
             }
-            if (top + uiRect.height > viewportHeight) {
-                top = cursorRect.top - uiRect.height - 5
-            }
-            this.slashCommandUI.style.left = Math.max(10, left) + 'px'
-            this.slashCommandUI.style.top = Math.max(10, top) + 'px'
-            this.slashCommandUI.style.display = 'block'
-            this.isActive = true
+    
+            this.slashCommandUI.style.left = Math.max(10, left) + 'px';
+            this.slashCommandUI.style.top = Math.max(10, top) + 'px';
+            this.slashCommandUI.style.display = 'block';
+            this.isActive = true;
+            this.lastPopdownPosition = {
+                left: left,
+                top: top,
+                bottom: top + uiRect.height,
+                width: uiRect.width,
+                isAboveCursor: isAboveCursor
+            };
         } else {
-            this.slashCommandUI.style.display = 'none'
+            this.slashCommandUI.style.display = 'none';
         }
-        this.selectedIndex = 0
+        this.selectedIndex = 0;
     }
 
     hideSlashCommandUI() {
@@ -558,11 +575,11 @@ export class SlashCommand {
             let verticalOffset;
     
             if (this.lastPopdownPosition.isAboveCursor) {
-                verticalOffset = this.lastPopdownPosition.bottom - this.lastPopdownPosition.top - badgeHeight - 2;
-                badge.style.top = `${this.lastPopdownPosition.top + verticalOffset}px`;
+                verticalOffset = this.lastPopdownPosition.bottom + 5;
+                badge.style.top = `${verticalOffset}px`;
             } else {
-                verticalOffset = -badgeHeight - 2;
-                badge.style.top = `${this.lastPopdownPosition.top + verticalOffset}px`;
+                verticalOffset = this.lastPopdownPosition.top - badgeHeight - 5;
+                badge.style.top = `${verticalOffset}px`;
             }
             
             badge.style.left = `${this.lastPopdownPosition.left}px`;
@@ -655,6 +672,7 @@ export class SlashCommand {
                 command: command,
                 parameter: parameter
             })
+
             if (!response || response.error) {
                 return null
             }

@@ -13,6 +13,7 @@ dist
 !dist/widget.css
 !dist/widget.html
 !dist/vite.svg
+!dist/auth.html
 !dist/assets
 dist-ssr
 *.local
