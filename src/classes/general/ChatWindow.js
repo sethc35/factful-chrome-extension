@@ -206,6 +206,26 @@ export class ChatWindow {
         pointer-events: none;
         border-radius: 2px;
       }
+      .close-button {
+        position: absolute;
+        right: 16px;
+        top: 7%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+    }
+
+    .close-button:hover {
+        color: #000;
+    }
     `;
     document.head.appendChild(styleTag);
 
@@ -224,6 +244,12 @@ export class ChatWindow {
     const title = document.createElement("h3");
     title.textContent = "Enhancements";
     header.appendChild(title);
+
+    const closeButton = document.createElement("button");
+    closeButton.classList.add("close-button");
+    closeButton.innerHTML = "✕";
+    closeButton.addEventListener("click", () => this.hide());
+    header.appendChild(closeButton);
 
     const body = document.createElement("div");
     body.classList.add("chat-body");
@@ -398,7 +424,7 @@ export class ChatWindow {
     languageSelect.style.color = "#000";
     languageSelect.style.backgroundColor = "#fff";
     languageSelect.style.border = "1px solid #ccc";
-    languageSelect.size = 5;  // Makes the select scrollable, with 10 visible options
+    languageSelect.size = 5;
 
     languages.forEach(lang => {
       const opt = document.createElement("option");
@@ -519,6 +545,8 @@ export class ChatWindow {
     this.lastCommand = null;
     this.lastInput = null;
     this.lastLanguage = null;
+    this.highlightingEnabled = false;
+    this.onVisibilityChange = null; 
     this.makeDraggable();
     this.initButtonEvents();
     this.addEventListeners();
@@ -613,6 +641,7 @@ export class ChatWindow {
   }
 
   toggleHighlight() {
+    if (!this.highlightingEnabled) return;
     this.clearHighlightDivs();
     const el = document.activeElement;
     
@@ -1147,20 +1176,46 @@ export class ChatWindow {
     return false;
   }
 
-  showAtElement() {
-    this.chatWindow.style.left = "100px";
-    this.chatWindow.style.top = "100px";
-    this.chatWindow.style.display = "block";
-    this.isVisible = true;
-    this.scheduleUpdate();
+  enableHighlighting() {
+    this.highlightingEnabled = true;
   }
 
+  disableHighlighting() {
+      this.highlightingEnabled = false;
+      this.clearHighlightDivs();
+  }
+
+  showAtElement() {
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const chatWidth = this.chatWindow.offsetWidth;
+    const chatHeight = this.chatWindow.offsetHeight;
+
+    let left = (windowWidth - chatWidth) / 2;
+    let top = (windowHeight - chatHeight) / 2;
+
+    left = Math.max(0, Math.min(left, windowWidth - chatWidth));
+    top = Math.max(0, Math.min(top, windowHeight - chatHeight));
+
+    this.chatWindow.style.left = `${left}px`;
+    this.chatWindow.style.top = `${top}px`;
+    this.chatWindow.style.display = "block";
+    this.isVisible = true;
+    if (this.onVisibilityChange) {
+        this.onVisibilityChange(true);
+    }
+    this.scheduleUpdate();
+  }
+  
   hide() {
     this.chatWindow.style.display = "none";
     this.isVisible = false;
     this.caretElement.style.display = "none";
     this.clearHighlightDivs();
     this.highlightActive = false;
+    if (this.onVisibilityChange) {
+        this.onVisibilityChange(false);
+    }
   }
 
   createCaret() {
