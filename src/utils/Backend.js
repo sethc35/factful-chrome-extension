@@ -202,3 +202,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 });
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    Backend.sendButton(request.command, request.input, request.language)
+        .then(response => {
+            sendResponse(response);
+        })
+        .catch(error => {
+            sendResponse({ error: error.message });
+        });
+    return true;
+});

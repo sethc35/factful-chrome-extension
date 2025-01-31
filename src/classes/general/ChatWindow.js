@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+/* eslint-disable no-undef */
 
 import getCaretCoordinates from "textarea-caret";
 
@@ -423,27 +424,45 @@ export class ChatWindow {
 
   handleFocusIn(event) {
     const el = event.target;
+
     if (el !== this.lastFocusedElement) {
-      return;
+        return;
     }
-    
-    if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
-      if (this.selectionStart !== null && this.selectionEnd !== null) {
-        if (el.value.length === this.lastContentLength) {
-          setTimeout(() => {
-            el.selectionStart = this.selectionStart;
-            el.selectionEnd = this.selectionEnd;
-          }, 0);
+
+    if (el.tagName === 'TEXTAREA') {
+        if (this.selectionStart !== null && 
+            this.selectionEnd !== null && 
+            el.value.length === this.lastContentLength) {
+            
+            setTimeout(() => {
+                el.selectionStart = this.selectionStart;
+                el.selectionEnd = this.selectionEnd;
+            }, 0);
         }
-      }
+    } 
+    else if (el.contentEditable === 'true' || el.closest('[contenteditable="true"]')) {
+        if (this.cachedRange && 
+            el.textContent.length === this.lastContentLength) {
+            
+            setTimeout(() => {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(this.cachedRange);
+            }, 0);
+        }
     }
   }
 
   handleFocusOut(event) {
     const el = event.target;
-    if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
-      this.storeSelectionData();
-      this.lastContentLength = el.value.length;
+    if (!el) return;
+
+    if (el.tagName === 'TEXTAREA') {
+        this.storeSelectionData();
+        this.lastContentLength = el.value.length;
+    } else if (el.contentEditable === 'true' || el.closest('[contenteditable="true"]')) {
+        this.storeSelectionData();
+        this.lastContentLength = el.textContent.length;
     }
   }
 
@@ -600,16 +619,118 @@ export class ChatWindow {
   }
 
   initButtonEvents() {
-    const buttons = [this.paraphraseButton, this.summarizeButton, this.translateButton];
-    buttons.forEach(button => {
-      button.addEventListener("click", () => {
-        this.showSuggestionSection("Suggestion text generated");
-      });
+    this.paraphraseButton.addEventListener("click", () => {
+        let selectedText = '';
+        
+        if (this.lastFocusedElement) {
+            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
+                selectedText = this.lastFocusedElement.value.substring(
+                    this.selectionStart,
+                    this.selectionEnd
+                );
+            } else if (this.cachedRange) {
+                selectedText = this.cachedRange.toString();
+            }
+        }
+
+        if (!selectedText) {
+            console.log('No text selected');
+            return;
+        }
+
+        try {
+            chrome.runtime.sendMessage({
+                command: 'paraphrase',
+                input: selectedText
+            }, response => {
+                if (response && response.output) {
+                    this.showSuggestionSection(response.output);
+                } else {
+                    this.showSuggestionSection("Error fetching text");
+                }
+            });
+        } catch (error) {
+            this.showSuggestionSection("Error fetching text");
+        }
     });
+
+    this.summarizeButton.addEventListener("click", () => {
+        let selectedText = '';
+        
+        if (this.lastFocusedElement) {
+            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
+                selectedText = this.lastFocusedElement.value.substring(
+                    this.selectionStart,
+                    this.selectionEnd
+                );
+            } else if (this.cachedRange) {
+                selectedText = this.cachedRange.toString();
+            }
+        }
+
+        if (!selectedText) {
+            console.log('No text selected');
+            return;
+        }
+
+        try {
+            chrome.runtime.sendMessage({
+                command: 'summarize',
+                input: selectedText
+            }, response => {
+                if (response && response.output) {
+                    this.showSuggestionSection(response.output);
+                } else {
+                    this.showSuggestionSection("Error fetching text");
+                }
+            });
+        } catch (error) {
+            this.showSuggestionSection("Error fetching text");
+        }
+    });
+
+    this.translateButton.addEventListener("click", () => {
+        let selectedText = '';
+        
+        if (this.lastFocusedElement) {
+            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
+                selectedText = this.lastFocusedElement.value.substring(
+                    this.selectionStart,
+                    this.selectionEnd
+                );
+            } else if (this.cachedRange) {
+                selectedText = this.cachedRange.toString();
+            }
+        }
+
+        if (!selectedText) {
+            console.log('No text selected');
+            return;
+        }
+
+        const targetLanguage = this.chatWindow.querySelector('select').value;
+
+        try {
+            chrome.runtime.sendMessage({
+                command: 'translate',
+                input: selectedText,
+                language: targetLanguage
+            }, response => {
+                if (response && response.output) {
+                    this.showSuggestionSection(response.output);
+                } else {
+                    this.showSuggestionSection("Error fetching text");
+                }
+            });
+        } catch (error) {
+            this.showSuggestionSection("Error fetching text");
+        }
+    });
+
     this.suggestionSection.querySelector(".accept-suggestion").addEventListener("click", () => this.acceptSuggestion());
     this.suggestionSection.querySelector(".retry-suggestion").addEventListener("click", () => this.retrySuggestion());
     this.suggestionSection.querySelector(".delete-suggestion").addEventListener("click", () => this.deleteSuggestion());
-  }  
+  }
 
   replaceHighlightedText(replacementText) {
     const el = this.lastFocusedElement;
