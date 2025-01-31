@@ -38,14 +38,6 @@ function initializeExtension() {
     }
   }
 
-  async function checkUser() {
-    console.log("[Authenticator] Checking user session...");
-
-    chrome.runtime.sendMessage({ action: "getUserSession" }, (response) => {
-      console.log("[Authenticator] User session:", response.session);
-    });
-  }
-
   async function fetchDataFromBackend(element) {
     const text = element.value || element.textContent || ''
     return chrome.runtime.sendMessage({
@@ -436,8 +428,6 @@ function initializeExtension() {
     }
     underline.clearUnderlines(activeElement)
   })
-
-  checkUser()
 }
 
 document.addEventListener('DOMContentLoaded', initializeExtension)

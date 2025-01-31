@@ -45,6 +45,7 @@ export function initializeGDocsTracker() {
     const slashCommand = new SlashCommand();
     let apiData = await ApiService.fetchDataFromApi();
     let isSignedIn = false;
+    let accessToken = null;
     let corrections = [];
     {
       const docText = await ApiService.collectTextFromRects();
@@ -58,30 +59,29 @@ export function initializeGDocsTracker() {
 
     checkUser();
 
-    function loginWithSupabase() {
+    function authenticateUser() {
       chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
     };
 
     function checkUser() {
-      console.log("[Authenticator] Checking user session...");
+      console.log("[Authenticator] Retrieving user session...");
 
       window.postMessage({ action: 'getUserSession' }, '*');
     };
 
     window.addEventListener('message', function(event) {
-      if (event.data.type === 'factfulUserSession') {
-        console.log('[Authenticator] User session retrieved:', event.data.data);
+      if (event.data.type && event.data.type === 'factfulUserSession') {
+        console.log("[Authenticator] Validation response recieved...");
 
-        if (event.data.data.error) {
-          console.log('[Authenticator] User not signed in');
+        if (event.data.isValid) {
+          isSignedIn = true;
+          accessToken = event.data.accessToken;
 
+          console.log("[Authenticator] User is signed in.");
+        } else {
           isSignedIn = false;
 
-          loginWithSupabase();
-        } else {
-          console.log('[Authenticator] User signed in');
-
-          isSignedIn = true;
+          authenticateUser();
         }
       }
     });

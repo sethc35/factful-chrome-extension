@@ -2,8 +2,6 @@
 
 var Backend = Backend || {};
 
-import { supabase } from "../supabase.js";
-
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
@@ -122,12 +120,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
               
                 if (!response.ok) {
-                    window.postMessage({ type: "factfulUserSession", data: { error: "Failed to verify access token" } }, "*");
+                    console.log('[Authenticator] Error verifying access token:', response.statusText);
+
+                    sendResponse({ error: "Failed to verify access token" });
                 } else {
                     const data = await response.json();
 
-                    window.postMessage({ type: "factfulUserSession", data: data }, "*");
+                    console.log('[Authenticator] Response received from API: ', data.data);
+
+                    sendResponse({ session: data.data, accessToken: accessToken });
                 }
+            } else {
+                console.log('[Authenticator] No access token found.');
+                
+                sendResponse({ error: "No access token found" });
             }
         });
         return true;
