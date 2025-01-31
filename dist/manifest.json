@@ -39,7 +39,7 @@
       "default_popup": "widget.html"
     },
     "content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://ybxboifzbpuhrqbbcneb.supabase.co"
+      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://backend.factful.io"
     },
     "web_accessible_resources": [{
       "resources": [

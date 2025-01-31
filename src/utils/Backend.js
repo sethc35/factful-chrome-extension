@@ -180,19 +180,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const response = await fetch(`https://backend.factful.io/verify_access_token`, {
                     method: "GET",
                     headers: {
-                      Authorization: `Bearer ${accessToken}`
+                        "Authorization": `Bearer ${accessToken}`
                     }
                 });
-              
+                
+                const data = await response.json();
+
                 if (!response.ok) {
-                    console.log('[Authenticator] Error verifying access token:', response.statusText);
+                    console.log('[Authenticator] Error verifying access token:', data.error, data.details);
 
                     chrome.storage.local.remove("access_token");
 
                     relayData({ error: "Failed to verify access token" });
-                } else {
-                    const data = await response.json();
 
+                    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+                    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+                    chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
+                } else {
                     console.log('[Authenticator] Response received from API: ', data.data);
 
                     relayData({ session: data.data, accessToken: accessToken });
@@ -200,7 +205,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             } else {
                 console.log('[Authenticator] No access token found.');
                 
-                relayData({ error: "Failed to verify access token" })
+                relayData({ error: "Failed to verify access token" });
                 
                 const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
                 const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
@@ -227,8 +232,8 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes.access_token) {
-        console.log("[Authenticator] Access token updated.");
+    if (area === "local" && changes.access_token && changes.access_token.newValue) {
+        console.log("[Authenticator] Access token updated:", changes.access_token.newValue);
 
         relayData({ accessToken: changes.access_token.newValue });
     }
@@ -238,6 +243,10 @@ function injectRelayScript(tabId) {
     chrome.scripting.executeScript({
         target: { tabId: tabId },
         func: () => {
+            if (window.__factful_relay_injected__) return;
+
+            window.__factful_relay_injected__ = true;
+
             window.addEventListener('message', (event) => {
                 if (event.data.action === 'getFactfulAccessToken') {
                     console.log('[Authenticator] Access token request recieved.');
