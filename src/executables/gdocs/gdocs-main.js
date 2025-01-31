@@ -112,24 +112,22 @@ export function initializeGDocsTracker() {
       underline.applyUnderlines(corrections, true);
     }
 
-    function authenticateUser() {
-      console.log("[Authenticator] Retrieving access token...");
+    function initiateAuthentication() {
+      console.log("[Authenticator] Initiating user authentication...");
 
-      window.postMessage({ action: 'getFactfulAccessToken' }, '*');
+      window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
     };
 
     window.addEventListener('message', function(event) {
-      if (event.data.type && event.data.type === 'factfulAccessToken') {
-        console.log("[Authenticator] Validation response recieved...", event.data.payload);
-
+      if (event.data.action && event.data.action === 'setFactfulAccessToken') {
         if (event.data.payload.error) {
           accessToken = null;
           
-          console.log("[Authenticator] Access token is invalid/expired.");
+          console.log('[Authenticator] Error setting access token:', event.data.payload.error)
         } else {
           accessToken = event.data.payload.accessToken;
 
-          console.log("[Authenticator] User is signed in.");
+          console.log('[Authenticator] Successfully received the access token:', event.data.payload);
         }
       }
     });
@@ -304,9 +302,7 @@ export function initializeGDocsTracker() {
       let previousCorrections = new Set();
       const debouncedApiUpdate = debounce(async () => {
         if (!accessToken) {
-          console.log("[Enhanced Text Tracker] User is not signed in.");
-
-          authenticateUser();
+          console.log("[Enhanced Text Tracker] User is not authenticated.");
 
           return;
         }
@@ -318,7 +314,6 @@ export function initializeGDocsTracker() {
           console.log("[Enhanced Text Tracker] Access token is invalid/expired.");
 
           accessToken = null;
-          authenticateUser();
 
           return;
         }
