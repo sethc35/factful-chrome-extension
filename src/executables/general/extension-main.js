@@ -22,12 +22,6 @@ function initializeExtension() {
 
   const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
 
-  // document.addEventListener("focusin", (event) => {
-  //     if (event.target instanceof HTMLTextAreaElement || event.target.isContentEditable) {
-  //         pill.showAtElement(event.target);
-  //     }
-  // });
-
   function debounce(func, wait) {
     let timeout
     return (...args) => {

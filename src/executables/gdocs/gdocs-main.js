@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */ 
+/* eslint-disable no-undef */
 
 export function initializeGDocsTracker() {
   window._docs_annotate_canvas_by_ext = "kbfnbcaeplbcioakkpcpgfkobkghlhen";

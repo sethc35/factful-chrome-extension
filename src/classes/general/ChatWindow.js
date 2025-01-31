@@ -385,11 +385,12 @@ export class ChatWindow {
 
   handleSelectionChange() {
     const hasSelection = window.getSelection().toString().trim().length > 0;
+    const hasHighlights = this.highlightDivs.length > 0;
     document.querySelectorAll('.quick-action-button, .translate-button').forEach(btn => {
-      btn.classList.toggle('enabled', hasSelection);
-      btn.disabled = !hasSelection;
+      btn.classList.toggle('enabled', hasHighlights);
+      btn.disabled = !hasHighlights;
     });
-
+  
     if (hasSelection) {
       this.storeSelectionData();
       this.toggleHighlight();
@@ -397,10 +398,25 @@ export class ChatWindow {
   }
 
   storeSelectionData() {
-    const el = document.activeElement;
-    if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
-      this.selectionStart = el.selectionStart;
-      this.selectionEnd = el.selectionEnd;
+    const selection = window.getSelection();
+    const activeElement = document.activeElement;
+    
+    if (!activeElement) return;
+    
+    if (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT') {
+      this.lastFocusedElement = activeElement;
+      this.selectionStart = activeElement.selectionStart;
+      this.selectionEnd = activeElement.selectionEnd;
+    } else if (activeElement.isContentEditable || activeElement.closest('[contenteditable="true"]')) {
+      const editableElement = activeElement.isContentEditable ? 
+        activeElement : 
+        activeElement.closest('[contenteditable="true"]');
+      
+      this.lastFocusedElement = editableElement;
+      
+      if (selection.rangeCount > 0) {
+        this.cachedRange = selection.getRangeAt(0).cloneRange();
+      }
     }
   }
 
@@ -408,9 +424,10 @@ export class ChatWindow {
     const el = event.target;
     if (el && (el.tagName === 'TEXTAREA' || el.contentEditable === 'true')) {
       if (this.selectionStart !== null && this.selectionEnd !== null) {
-        el.selectionStart = this.selectionStart;
-        el.selectionEnd = this.selectionEnd;
-        this.toggleHighlight();
+        setTimeout(() => {
+          el.selectionStart = this.selectionStart;
+          el.selectionEnd = this.selectionEnd;
+        }, 0);
       }
     }
   }
@@ -568,33 +585,40 @@ export class ChatWindow {
     const buttons = [this.paraphraseButton, this.summarizeButton, this.translateButton];
     buttons.forEach(button => {
       button.addEventListener("click", () => {
-        this.toggleHighlight();
         this.showSuggestionSection("Suggestion text generated");
       });
     });
     this.suggestionSection.querySelector(".accept-suggestion").addEventListener("click", () => this.acceptSuggestion());
     this.suggestionSection.querySelector(".retry-suggestion").addEventListener("click", () => this.retrySuggestion());
     this.suggestionSection.querySelector(".delete-suggestion").addEventListener("click", () => this.deleteSuggestion());
-  }
+  }  
 
   replaceHighlightedText(replacementText) {
-    const activeElement = document.activeElement;
-    const selection = window.getSelection();
-    if (activeElement && (activeElement.tagName === "TEXTAREA" || activeElement.tagName === "INPUT")) {
-      const start = activeElement.selectionStart;
-      const end = activeElement.selectionEnd;
-      if (start !== end) {
-        const text = activeElement.value;
-        activeElement.value = text.slice(0, start) + replacementText + text.slice(end);
-        activeElement.selectionStart = activeElement.selectionEnd = start + replacementText.length;
+    const el = this.lastFocusedElement;
+    console.log('last focused element: ', el);
+    if (!el) return;
+  
+    if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+      const start = this.selectionStart;
+      const end = this.selectionEnd;
+      if (start !== null && end !== null && start !== end) {
+        const text = el.value;
+        el.value = text.slice(0, start) + replacementText + text.slice(end);
+        el.selectionStart = el.selectionEnd = start + replacementText.length;
       }
-    } else if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      if (!range.collapsed) {
-        range.deleteContents();
-        range.insertNode(document.createTextNode(replacementText));
-        selection.removeAllRanges();
-      }
+    } else if (el.contentEditable === 'true' && this.cachedRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      const range = this.cachedRange.cloneRange();
+      range.deleteContents();
+      const textNode = document.createTextNode(replacementText);
+      range.insertNode(textNode);
+      sel.addRange(range);
+      const newRange = document.createRange();
+      newRange.setStart(textNode, textNode.length);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
     }
   }
 

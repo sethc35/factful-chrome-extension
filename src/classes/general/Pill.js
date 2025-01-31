@@ -54,7 +54,6 @@ export class Pill {
         this.updatePosition();
         this.container.style.display = "flex";
 
-        // Ensure position is always updated when necessary
         this.adjustPosition = () => this.updatePosition();
         element.addEventListener('scroll', this.adjustPosition);
         window.addEventListener('scroll', this.adjustPosition);
@@ -76,7 +75,6 @@ export class Pill {
         this.container.style.display = "none";
         this.activeElement = null;
 
-        // Remove event listeners
         window.removeEventListener('scroll', this.adjustPosition);
         window.removeEventListener('resize', this.adjustPosition);
     }
