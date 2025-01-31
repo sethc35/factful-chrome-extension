@@ -7,8 +7,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'extension-main': 'src/executables/general/extension-main.js',
-        'backend': 'src/utils/Backend.js',
-        'gdocs-authenticator': 'src/executables/gdocs/gdocs-authenticator.js',
+        'backend': 'src/utils/Backend.js'
       },
       output: {
         entryFileNames: '[name].js'

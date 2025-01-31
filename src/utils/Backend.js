@@ -170,8 +170,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    if (message.action === "getUserSession") {
-        console.log('[Authenticator] Retrieving user session...');
+    if (message.action === "getFactfulAccessToken") {
+        console.log('[Authenticator] Retrieving access token...');
         
         chrome.storage.local.get("access_token", async ({ accessToken }) => {
             if (accessToken) {
@@ -185,20 +185,84 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 if (!response.ok) {
                     console.log('[Authenticator] Error verifying access token:', response.statusText);
 
-                    sendResponse({ error: "Failed to verify access token" });
+                    chrome.storage.local.remove("access_token");
+
+                    relayData({ error: "Failed to verify access token" });
                 } else {
                     const data = await response.json();
 
                     console.log('[Authenticator] Response received from API: ', data.data);
 
-                    sendResponse({ session: data.data, accessToken: accessToken });
+                    relayData({ session: data.data, accessToken: accessToken });
                 }
             } else {
                 console.log('[Authenticator] No access token found.');
                 
-                sendResponse({ error: "No access token found" });
+                relayData({ error: "Failed to verify access token" })
+                
+                const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+                const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+
+                chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
             }
         });
         return true;
     }
 });
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete') {
+        injectRelayScript(tabId);
+
+        console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+    }
+});
+  
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+    injectRelayScript(tabId);
+
+    console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+});
+
+function injectRelayScript(tabId) {
+    chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: () => {
+            window.addEventListener('message', (event) => {
+                if (event.data.action === 'getFactfulAccessToken') {
+                    console.log('[Authenticator] Access token request recieved.');
+
+                    chrome.runtime.sendMessage(chrome.runtime.id, { action: 'getFactfulAccessToken' });
+                }
+            });
+                  
+            function relayData(data) {
+                window.postMessage({ type: 'factfulAccessToken', payload: data }, '*');
+            }
+                  
+            window.relayData = relayData;
+
+            console.log('[Authenticator] Relay script successfully injected.');
+        }
+    })
+}
+
+function relayData(data) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length > 0) {
+            const tabId = tabs[0].id;
+
+            chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: (data) => {
+                    if (window.relayData) {
+                        window.relayData(data);
+                    } else {
+                        console.error('[Authenticator] relayData is not defined.');
+                    }
+                },
+                args: [data],
+            });
+        }
+    });
+}

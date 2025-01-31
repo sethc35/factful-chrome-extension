@@ -103,7 +103,6 @@ export function initializeGDocsTracker() {
     const underline = new Underline();
     const slashCommand = new SlashCommand();
     let apiData = await ApiService.fetchDataFromApi();
-    let isSignedIn = false;
     let accessToken = null;
     let corrections = [];
     {
@@ -113,61 +112,27 @@ export function initializeGDocsTracker() {
       underline.applyUnderlines(corrections, true);
     }
 
-    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
-    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+    function authenticateUser() {
+      console.log("[Authenticator] Retrieving access token...");
 
-    async function initializeSupabaseAuth() {
-      const authForm = createAuthForm();
-      document.body.appendChild(authForm);
-
-      const form = authForm.querySelector('#auth-form');
-      const googleButton = authForm.querySelector('#google-signin');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = authForm.querySelector('#email').value;
-        const password = authForm.querySelector('#password').value;
-
-        window.postMessage({ 
-          action: 'signInWithPassword',
-          data: { email, password }
-        }, '*');
-      });
-
-      googleButton.addEventListener('click', () => {
-        window.postMessage({ 
-          action: 'signInWithGoogle',
-          data: { redirectUrl }
-        }, '*');
-      });
-
-      window.postMessage({ action: 'getSession' }, '*');
-    }
-
-    function checkUser() {
-      console.log("[Authenticator] Retrieving user session...");
-      if (!isSignedIn) {
-        initializeSupabaseAuth();
-      }
-    }
+      window.postMessage({ action: 'getFactfulAccessToken' }, '*');
+    };
 
     window.addEventListener('message', function(event) {
-      if (event.data.type === 'authStateChange') {
-        const { event: authEvent, session } = event.data;
-        if (authEvent === 'SIGNED_IN') {
-          isSignedIn = true;
-          accessToken = session.access_token;
-          const authForm = document.querySelector('.auth-container');
-          if (authForm) authForm.remove();
-        } else if (authEvent === 'SIGNED_OUT') {
-          isSignedIn = false;
+      if (event.data.type && event.data.type === 'factfulAccessToken') {
+        console.log("[Authenticator] Validation response recieved...", event.data.payload);
+
+        if (event.data.payload.error) {
           accessToken = null;
-          checkUser();
+          
+          console.log("[Authenticator] Access token is invalid/expired.");
+        } else {
+          accessToken = event.data.payload.accessToken;
+
+          console.log("[Authenticator] User is signed in.");
         }
       }
     });
-
-    checkUser();
 
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,

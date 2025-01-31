@@ -3,7 +3,12 @@
     "version": "1.2",
     "manifest_version": 3,
     "permissions": [
-      "storage"
+      "storage",
+      "scripting",
+      "activeTab"
+    ],
+    "host_permissions": [
+      "<all_urls>"
     ],
     "background": {
       "service_worker": "backend.js",
@@ -17,12 +22,6 @@
         "run_at": "document_start",
         "world": "MAIN"
       },
-      {
-        "matches": ["*://docs.google.com/document/*"],
-        "all_frames": true,
-        "js": ["gdocs-authenticator.js"],
-        "run_at": "document_start"
-      },    
       {
         "matches": ["<all_urls>"],
         "exclude_matches": ["*://docs.google.com/*", "*://app.factful.io/*"],
