@@ -144,7 +144,7 @@ Backend.sendButton = async function(command, input, language) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'fetchData') {
+    if (message.action === "fetchData") {
         (async () => {
             try {
                 const data = await Backend.fetchData(message.textInput);
@@ -157,7 +157,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
     
-    if (message.action === 'sendCommand') {
+    if (message.action === "sendCommand") {
         (async () => {
             try {
                 const data = await Backend.sendCommand(message.command, message.parameter);
@@ -201,15 +201,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
-});
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    Backend.sendButton(request.command, request.input, request.language)
-        .then(response => {
-            sendResponse(response);
-        })
-        .catch(error => {
-            sendResponse({ error: error.message });
-        });
-    return true;
 });

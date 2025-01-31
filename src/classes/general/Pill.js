@@ -159,6 +159,10 @@ export class Pill {
     }
 
     isTextInput(element) {
+        if (element.closest('.command-badge-overlay')) {
+            return false;
+        }
+        
         if (element.tagName === "TEXTAREA") {
             return true;
         }

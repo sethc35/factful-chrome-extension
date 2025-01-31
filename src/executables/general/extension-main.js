@@ -38,6 +38,7 @@ function initializeExtension() {
       action: 'fetchData',
       textInput: text
     }).then(response => {
+      console.log('get back from fetch data: ', response);
       if (response.error) {
         return null
       }
