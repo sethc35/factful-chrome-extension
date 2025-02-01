@@ -277,7 +277,6 @@ function injectRelayScript(tabId) {
                 });
                     
                 function relayData(data) {
-                    console.log('data relayed: ', data);
                     window.postMessage({ action: 'setFactfulAccessToken', payload: data }, '*');
                 }
                     
