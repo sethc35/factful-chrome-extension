@@ -220,7 +220,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "initiateAuthentication") {
-        initiateAuthentication();
+        handleAuthentication();
 
         sendResponse({ message: '[Authenticator] User authentication initiated' });
 
@@ -394,12 +394,7 @@ function isGoogleDocsTab(tabId, callback) {
     });
 }
 
-function initiateAuthentication(gDocs = true) {
-    if (gDocs === true) {
-        handleAuthentication();
-        return;
-    }
-
+function initiateAuthentication() {
     const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
     const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
 
@@ -407,17 +402,14 @@ function initiateAuthentication(gDocs = true) {
 }
 
 async function handleAuthentication() {
-    // Store current tab info
     const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const originalUrl = currentTab.url;
     const originalTabId = currentTab.id;
 
-    // Supabase authentication configuration
     const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
-    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+    const redirectUrl = `https://app.factful.io/`;
     const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
-    // Create authentication tab
     const authTab = await chrome.tabs.create({ url: authUrl });
 
     const handleAuthComplete = async (tabId, changeInfo, tab) => {
@@ -436,26 +428,6 @@ async function handleAuthentication() {
                             access_token: accessToken,
                             expires_at: expiresAt,
                             auth_url: newUrl
-                        });
-
-                        await chrome.scripting.executeScript({
-                            target: { tabId: originalTabId },
-                            func: (accessToken, expiresAt) => {
-                                if (typeof Cookies !== 'undefined') {
-                                    Cookies.set('access_token', accessToken, {
-                                        expires: new Date(parseInt(expiresAt) * 1000),
-                                        secure: true,
-                                        sameSite: 'strict'
-                                    });
-                                    
-                                    Cookies.set('expires_at', expiresAt, {
-                                        expires: new Date(parseInt(expiresAt) * 1000),
-                                        secure: true,
-                                        sameSite: 'strict'
-                                    });
-                                }
-                            },
-                            args: [accessToken, expiresAt]
                         });
 
                         await chrome.tabs.remove(authTab.id);
@@ -489,5 +461,5 @@ async function handleAuthentication() {
 
     setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(handleAuthComplete);
-    }, 300000);
+    }, 300000); // auth expires after 5 min
 }
