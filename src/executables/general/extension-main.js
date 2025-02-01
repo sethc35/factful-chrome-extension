@@ -58,14 +58,19 @@ function initializeExtension() {
 
   async function fetchDataFromBackend(element) {
     const text = element.value || element.textContent || ''
+
     return chrome.runtime.sendMessage({
       action: 'fetchData',
       textInput: text
     }).then(response => {
-      console.log('get back from fetch data: ', response);
       if (response.error) {
-        return null
+        console.log('[APIService] Error fetching data:', response.error);
+
+        return;
       }
+
+      console.log('[APIService] API response: ', response);
+
       return response
     }).catch(() => null)
   }

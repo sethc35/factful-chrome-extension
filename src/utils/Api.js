@@ -74,7 +74,9 @@ export class ApiService {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      console.log('get back: ', data);
+
+      console.log('[APIService] API response: ', data);
+
       return data || {}
     } catch (error) {
       return { error: error.message }

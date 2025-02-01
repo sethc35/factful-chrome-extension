@@ -306,10 +306,13 @@ export function initializeGDocsTracker() {
         const freshText = await ApiService.collectTextFromRects();
         const newApiData = await ApiService.fetchDataFromApi(accessToken);
 
-        if (newApiData.error === "Unauthorized") {
-          console.log("[Enhanced Text Tracker] Access token is invalid/expired.");
+        if (newApiData.error) {
+          console.log("[Enhanced Text Tracker] Error fetching data", newApiData.error);
 
-          accessToken = null;
+          if (newApiData.error === "Unauthorized") {
+            accessToken = null;
+            singlePill.changeAuthenticationState(false);
+          }
 
           return;
         }
