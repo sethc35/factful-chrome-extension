@@ -209,7 +209,7 @@ export class ChatWindow {
       .close-button {
         position: absolute;
         right: 16px;
-        top: 7%;
+        top: 5%;
         transform: translateY(-50%);
         width: 20px;
         height: 20px;
@@ -225,6 +225,37 @@ export class ChatWindow {
 
     .close-button:hover {
         color: #000;
+    }
+    .search-button {
+        min-width: 36px;
+        height: 36px;
+        padding: 8px;
+        border: none;
+        border-radius: 8px;
+        background-color: #0177FC;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+
+    .search-button:hover {
+        background-color: #0156b3;
+    }
+
+    .search-results {
+        margin-top: 16px;
+        border-top: 1px solid #e0e0e0;
+    }
+    .search-button.disabled {
+        background-color: #e0e0e0;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    .search-button.disabled svg {
+        stroke: #999;
     }
     `;
     document.head.appendChild(styleTag);
@@ -262,6 +293,7 @@ export class ChatWindow {
     const qaSubtitle = document.createElement("p");
     qaSubtitle.textContent = "Select text to apply changes.";
     quickActionsSection.appendChild(qaSubtitle);
+    body.appendChild(quickActionsSection);
 
     const quickActionsContainer = document.createElement("div");
     quickActionsContainer.classList.add("quick-actions-container");
@@ -421,6 +453,7 @@ export class ChatWindow {
     ];
 
     const languageSelect = document.createElement("select");
+    languageSelect.classList.add('translate-row-select');
     languageSelect.style.color = "#000";
     languageSelect.style.backgroundColor = "#fff";
     languageSelect.style.border = "1px solid #ccc";
@@ -441,39 +474,54 @@ export class ChatWindow {
 
     quickActionsSection.appendChild(quickActionsContainer);
 
-    const researchSection = document.createElement("div");
-    researchSection.classList.add("research-section");
-    const researchTitle = document.createElement("h4");
-    researchTitle.textContent = "Research";
-    researchSection.appendChild(researchTitle);
-    const researchSubtitle = document.createElement("p");
-    researchSubtitle.textContent = "Search for anything on the web.";
-    researchSection.appendChild(researchSubtitle);
     const searchContainer = document.createElement("div");
     searchContainer.classList.add("research-input-wrapper");
+    searchContainer.style.display = "flex";
+    searchContainer.style.alignItems = "center";
+    searchContainer.style.gap = "8px";
+
+    const inputWrapper = document.createElement("div");
+    inputWrapper.style.position = "relative";
+    inputWrapper.style.flex = "1";
+
     const searchInput = document.createElement("input");
     searchInput.type = "text";
     searchInput.placeholder = "How long was the Queen's rule?";
-    const searchIcon = document.createElement("svg");
-    searchIcon.classList.add("search-icon", "icon-search");
-    searchIcon.setAttribute("viewBox", "0 0 24 24");
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", "11");
-    circle.setAttribute("cy", "11");
-    circle.setAttribute("r", "8");
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", "21");
-    line.setAttribute("y1", "21");
-    line.setAttribute("x2", "16.65");
-    line.setAttribute("y2", "16.65");
-    searchIcon.appendChild(circle);
-    searchIcon.appendChild(line);
-    searchContainer.appendChild(searchIcon);
-    searchContainer.appendChild(searchInput);
-    researchSection.appendChild(searchContainer);
+    this.searchInput = searchInput;
 
-    body.appendChild(quickActionsSection);
-    body.appendChild(researchSection);
+    const searchButton = document.createElement("button");
+    searchButton.classList.add("search-button");
+    searchButton.style.width = "36px";
+    searchButton.style.height = "36px";
+    searchButton.style.padding = "8px";
+    searchButton.style.border = "none";
+    searchButton.style.borderRadius = "8px";
+    searchButton.style.backgroundColor = "#0177FC";
+    searchButton.style.cursor = "pointer";
+    searchButton.style.display = "flex";
+    searchButton.style.alignItems = "center";
+    searchButton.style.justifyContent = "center";
+    this.searchButton = searchButton;
+
+    const arrowSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    arrowSvg.setAttribute("viewBox", "0 0 24 24");
+    arrowSvg.setAttribute("width", "20");
+    arrowSvg.setAttribute("height", "20");
+    arrowSvg.style.fill = "none";
+    arrowSvg.style.stroke = "#ffffff";
+    arrowSvg.style.strokeWidth = "2";
+    arrowSvg.style.strokeLinecap = "round";
+    arrowSvg.style.strokeLinejoin = "round";
+
+    const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    arrowPath.setAttribute("d", "M5 12h14M12 5l7 7-7 7");
+    arrowSvg.appendChild(arrowPath);
+    searchButton.appendChild(arrowSvg);
+
+    inputWrapper.appendChild(searchInput);
+    searchContainer.appendChild(inputWrapper);
+    searchContainer.appendChild(searchButton);
+
 
     this.chatWindow.appendChild(header);
     this.chatWindow.appendChild(body);
@@ -530,6 +578,17 @@ export class ChatWindow {
     container.appendChild(deleteButton);
     this.suggestionSection.appendChild(container);
     this.chatWindow.appendChild(this.suggestionSection);
+
+    const researchSection = document.createElement("div");
+    researchSection.classList.add("research-section");
+    const researchTitle = document.createElement("h4");
+    researchTitle.textContent = "Research";
+    researchSection.appendChild(researchTitle);
+    const researchDescription = document.createElement("p");
+    researchDescription.textContent = "Search for information about any topic.";
+    researchSection.appendChild(researchDescription);
+    researchSection.appendChild(searchContainer);
+    body.appendChild(researchSection);
 
     const highlightOverlay = document.createElement("div");
     highlightOverlay.classList.add("highlight-overlay");
@@ -637,6 +696,18 @@ export class ChatWindow {
     } else if (el.contentEditable === 'true' || el.closest('[contenteditable="true"]')) {
         this.storeSelectionData();
         this.lastContentLength = el.textContent.length;
+    }
+  }
+
+  enableSearchButton(button) {
+    button.disabled = false;
+    button.style.backgroundColor = '#0177FC';
+    button.style.cursor = 'pointer';
+    button.style.opacity = '1';
+    
+    const svg = button.querySelector('svg');
+    if (svg) {
+        svg.style.stroke = '#ffffff';
     }
   }
 
@@ -820,7 +891,6 @@ export class ChatWindow {
             selection.removeAllRanges();
             selection.addRange(range);
         } else {
-            // If no range, append to the end
             const textNode = document.createTextNode(text);
             el.appendChild(textNode);
         }
@@ -893,8 +963,8 @@ export class ChatWindow {
               parameter: selectedText
           }, response => {
             console.log('get back from summarize: ', response);
-              if (response && response.output) {
-                  this.showSuggestionSection(response.output);
+              if (response && response['summarized-text']) {
+                  this.showSuggestionSection(response['summarized-text']);
               } else {
                   this.showSuggestionSection("Error fetching text");
               }
@@ -902,13 +972,13 @@ export class ChatWindow {
         } catch (error) {
             this.showSuggestionSection("Error fetching text");
         }
-    });
+      });
 
-    this.translateButton.addEventListener("click", () => {
+      this.translateButton.addEventListener("click", () => {
         let selectedText = '';
         
         if (this.lastFocusedElement) {
-            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
+            if (this.lastFocusedElement.tagName === "TEXTAREA") {
                 selectedText = this.lastFocusedElement.value.substring(
                     this.selectionStart,
                     this.selectionEnd
@@ -917,62 +987,140 @@ export class ChatWindow {
                 selectedText = this.cachedRange.toString();
             }
         }
-
+    
+        console.log('Selected text:', selectedText);
+    
         if (!selectedText) {
             console.log('No text selected');
             return;
         }
 
-        const targetLanguage = this.chatWindow.querySelector('select').value;
+        const languageSelect = this.chatWindow.querySelector('.translate-row select');
+        const targetLanguage = languageSelect.value;
         
-        this.lastCommand = 'translate';
-        this.lastInput = selectedText;
-        this.lastLanguage = targetLanguage;
+        console.log('Target language:', targetLanguage);
+    
+        chrome.runtime.sendMessage({
+            action: "sendButton",
+            command: "translate",
+            parameter: selectedText,
+            language: targetLanguage
+        }, response => {
+            console.log('Translation response:', response);
+            if (response && response['translated-text']) {
+                this.showSuggestionSection(response['translated-text']);
+            } else {
+                this.showSuggestionSection("Error translating text");
+            }
+        });
+      });
 
+      const searchInput = this.searchInput;
+      const searchButton = this.searchButton;
+      const handleSearch = async () => {
+        const searchQuery = searchInput.value.trim();
+        if (!searchQuery) return;
+
+        searchButton.classList.add('disabled');
+        searchButton.disabled = true;
+        searchButton.style.backgroundColor = '#e0e0e0';
+        searchButton.style.cursor = 'not-allowed';
+        searchButton.style.opacity = '0.7';
+
+        const svg = searchButton.querySelector('svg');
+        if (svg) {
+            svg.style.stroke = '#999';
+        }
+
+        searchInput.disabled = true;
+    
+        this.lastCommand = 'search';
+        this.lastInput = searchQuery;
+        this.lastLanguage = null;
+    
         try {
-          chrome.runtime.sendMessage({
-              action: "sendButton",
-              command: "translate",
-              parameter: selectedText,
-              language: targetLanguage
-          }, response => {
-              if (response && response.output) {
-                  this.showSuggestionSection(response.output);
-              } else {
-                  this.showSuggestionSection("Error fetching text");
-              }
-          });
+            chrome.runtime.sendMessage({
+                action: "sendButton",
+                command: "search",
+                parameter: searchQuery
+            }, response => {
+                console.log('search query response:', response);
+                if (response && response.final_result) {
+                    const searchResultsContainer = document.createElement('div');
+                    searchResultsContainer.style.padding = '16px';
+                    searchResultsContainer.style.display = 'flex';
+                    searchResultsContainer.style.flexDirection = 'column';
+                    searchResultsContainer.style.gap = '16px';
+
+                    const resultText = document.createElement("p");
+                    resultText.style.fontSize = "14px";
+                    resultText.style.lineHeight = "1.5";
+                    resultText.textContent = response.final_result;
+                    searchResultsContainer.appendChild(resultText);
+
+                    if (response.sources && response.sources.length > 0) {
+                        const sourcesContainer = document.createElement('div');
+                        sourcesContainer.style.display = 'flex';
+                        sourcesContainer.style.flexDirection = 'column';
+                        sourcesContainer.style.gap = '8px';
+    
+                        const sourcesTitle = document.createElement('p');
+                        sourcesTitle.style.fontSize = '14px';
+                        sourcesTitle.style.fontWeight = 'bold';
+                        sourcesTitle.textContent = 'Sources:';
+                        sourcesContainer.appendChild(sourcesTitle);
+    
+                        response.sources.forEach(source => {
+                            const link = document.createElement('a');
+                            link.href = source;
+                            link.target = '_blank';
+                            link.style.color = '#0177FC';
+                            link.style.textDecoration = 'none';
+                            link.style.fontSize = '12px';
+                            link.textContent = source;
+                            link.addEventListener('mouseover', () => link.style.textDecoration = 'underline');
+                            link.addEventListener('mouseout', () => link.style.textDecoration = 'none');
+                            sourcesContainer.appendChild(link);
+                        });
+    
+                        searchResultsContainer.appendChild(sourcesContainer);
+                    }
+
+                    const existingResults = this.chatWindow.querySelector('.search-results');
+                    if (existingResults) {
+                        existingResults.remove();
+                    }
+                    searchResultsContainer.classList.add('search-results');
+                    this.chatWindow.appendChild(searchResultsContainer);
+                    setTimeout(() => {
+                      this.enableSearchButton(searchButton);
+                      searchInput.disabled = false;
+                      searchInput.value = '';
+                    }, 100);
+                } else {
+                    const errorContainer = document.createElement('div');
+                    errorContainer.innerHTML = '<p style="color: #ff0000;">Error searching</p>';
+                    this.chatWindow.appendChild(errorContainer);
+                }
+            });
         } catch (error) {
-            this.showSuggestionSection("Error fetching text");
+            searchButton.classList.remove('disabled');
+            searchButton.disabled = false;
+            searchInput.disabled = false;
+            const errorContainer = document.createElement('div');
+            errorContainer.innerHTML = '<p style="color: #ff0000;">Error searching</p>';
+            this.chatWindow.appendChild(errorContainer);
+        }
+    };
+    
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
         }
     });
-
-    const searchInput = this.chatWindow.querySelector('.research-input-wrapper input');
-    searchInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-            const searchQuery = searchInput.value.trim();
-            if (!searchQuery) return;
-
-            this.lastCommand = 'search';
-            this.lastInput = searchQuery;
-            this.lastLanguage = null;
-
-            try {
-                chrome.runtime.sendMessage({
-                    action: "sendButton",
-                    command: "search",
-                    parameter: searchQuery
-                }, response => {
-                    if (response && response.search_results && response.search_results[0]) {
-                        this.showSuggestionSection(response.search_results[0]);
-                    } else {
-                        this.showSuggestionSection("Error searching");
-                    }
-                });
-            } catch (error) {
-                this.showSuggestionSection("Error searching");
-            }
-        }
+    
+    searchButton.addEventListener('click', () => {
+        handleSearch();
     });
 
     this.suggestionSection.querySelector(".accept-suggestion").addEventListener("click", () => {
@@ -1056,6 +1204,15 @@ export class ChatWindow {
       sel.addRange(this.cachedRange);
     }
   }
+
+  clearSearchResults = () => {
+    const existingResults = this.chatWindow.querySelector('.search-results');
+    if (existingResults) {
+        existingResults.remove();
+    }
+    searchButton.classList.remove('disabled');
+    searchButton.disabled = false;
+  };
 
   showSuggestionSection(suggestionText) {
     const suggestionTextElement = this.suggestionSection.querySelector("p");

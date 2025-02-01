@@ -100,7 +100,7 @@ Backend.sendButton = async function(command, input, language) {
                 isSearch = false;
                 break;
             case 'search':
-                endpoint = 'search';
+                endpoint = 'smart-search';
                 isSearch = true;
                 isTranslate = false; // insurance
                 break;
@@ -112,8 +112,9 @@ Backend.sendButton = async function(command, input, language) {
             ? `https://backend.factful.io/translate?text=${query}&language=${language}`
             : isSearch
                 ? `https://backend.factful.io/${endpoint}?query=${query}`
-                : `https://backend.factful.io/${endpoint}?input=${query}`
+                : `https://backend.factful.io/${endpoint}?text=${query}`
     
+        console.log('url of sendbutton: ', url);
 
         const response = await fetch(url, {
             method: 'GET',
@@ -173,23 +174,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "sendButton") {
         (async () => {
             try {
-                const data = await Backend.sendButton(
-                    message.command, 
-                    message.input || message.parameter,
-                    message.language
-                );
-                sendResponse(data);
-            } catch (error) {
-                console.log('Error processing command: ', error);
-                sendResponse({ error: 'Failed to process command' });
-            }
-        })();
-        return true;
-    }
-
-    if (message.action === "sendButton") {
-        (async () => {
-            try {
+                console.log('params: ', message);
                 const data = await Backend.sendButton(
                     message.command, 
                     message.input || message.parameter,
