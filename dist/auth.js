@@ -9,6 +9,18 @@ if (accessToken && expiresAt && refreshToken && tokenType) {
     chrome.storage.local.set({ access_token: accessToken, expires_at: expiresAt, refresh_token: refreshToken }, () => {
         console.log("[Authenticator] Access token saved in storage.");
 
-        document.getElementById("auth-message").innerText = "Authentication successful! You can close this tab now.";
+        document.getElementById("auth-message").innerText = "Authentication successful! This tab will close in 3 seconds.";
+
+        setTimeout(() => {
+            document.getElementById("auth-message").innerText = "Authentication successful! This tab will close in 2 seconds.";
+        }, 1000);
+
+        setTimeout(() => {
+            document.getElementById("auth-message").innerText = "Authentication successful! This tab will close in 1 second.";
+        }, 2000);
+
+        setTimeout(() => {
+            window.close();
+        }, 3000);
     });
 }

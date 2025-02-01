@@ -14,7 +14,7 @@ Backend.fetchData = async function(textInput) {
                 const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${data.access_token}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -24,7 +24,7 @@ Backend.fetchData = async function(textInput) {
                         return { error: "Unauthorized" }
                     }
 
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    throw new Error(`[APIService] HTTP error! Status: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -220,7 +220,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "initiateAuthentication") {
-        handleAuthentication();
+        initiateAuthentication();
+        // handleAuthentication();
 
         sendResponse({ message: '[Authenticator] User authentication initiated' });
 
@@ -422,6 +423,8 @@ async function handleAuthentication() {
 
                     const accessToken = hashParams.get('access_token');
                     const expiresAt = hashParams.get('expires_at');
+                    const refreshToken = hashParams.get("refresh_token");
+                    const tokenType = hashParams.get("token_type");
 
                     if (accessToken && expiresAt) {
                         await chrome.storage.local.set({
@@ -461,5 +464,5 @@ async function handleAuthentication() {
 
     setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(handleAuthComplete);
-    }, 300000); // auth expires after 5 min
+    }, 300000); // Auth expires after 5 min
 }
