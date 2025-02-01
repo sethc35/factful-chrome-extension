@@ -170,6 +170,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.action === "sendButton") {
+        (async () => {
+            try {
+                const data = await Backend.sendButton(
+                    message.command, 
+                    message.input || message.parameter,
+                    message.language
+                );
+                sendResponse(data);
+            } catch (error) {
+                console.log('Error processing command: ', error);
+                sendResponse({ error: 'Failed to process command' });
+            }
+        })();
+        return true;
+    }
+
+    if (message.action === "sendButton") {
+        (async () => {
+            try {
+                const data = await Backend.sendButton(
+                    message.command, 
+                    message.input || message.parameter,
+                    message.language
+                );
+                sendResponse(data);
+            } catch (error) {
+                console.log('Error processing command: ', error);
+                sendResponse({ error: 'Failed to process command' });
+            }
+        })();
+        return true;
+    }
+
     if (message.action === "initiateAuthentication") {
         initiateAuthentication();
 

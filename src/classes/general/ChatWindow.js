@@ -829,42 +829,38 @@ export class ChatWindow {
 
   initButtonEvents() {
     this.paraphraseButton.addEventListener("click", () => {
-        let selectedText = '';
-        
-        if (this.lastFocusedElement) {
-            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
-                selectedText = this.lastFocusedElement.value.substring(
-                    this.selectionStart,
-                    this.selectionEnd
-                );
-            } else if (this.cachedRange) {
-                selectedText = this.cachedRange.toString();
-            }
-        }
-
-        if (!selectedText) {
-            console.log('No text selected');
-            return;
-        }
-
-        this.lastCommand = 'paraphrase';
-        this.lastInput = selectedText;
-        this.lastLanguage = null;
-
-        try {
-            chrome.runtime.sendMessage({
-                command: 'paraphrase',
-                input: selectedText
-            }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
-        } catch (error) {
-            this.showSuggestionSection("Error fetching text");
-        }
+      let selectedText = '';
+      
+      if (this.lastFocusedElement) {
+          if (this.lastFocusedElement.tagName === "TEXTAREA") {
+              selectedText = this.lastFocusedElement.value.substring(
+                  this.selectionStart,
+                  this.selectionEnd
+              );
+          } else if (this.cachedRange) {
+              selectedText = this.cachedRange.toString();
+          }
+      }
+  
+      console.log('Selected text:', selectedText);
+  
+      if (!selectedText) {
+          console.log('No text selected');
+          return;
+      }
+  
+      chrome.runtime.sendMessage({
+          action: "sendButton",
+          command: "paraphrase",
+          parameter: selectedText
+      }, response => {
+        console.log('paraphrase get back: ', response);
+          if (response && response['paraphrased-text']) {
+              this.showSuggestionSection(response['paraphrased-text']);
+          } else {
+              this.showSuggestionSection("Error fetching text");
+          }
+      });
     });
 
     this.summarizeButton.addEventListener("click", () => {
@@ -891,16 +887,18 @@ export class ChatWindow {
         this.lastLanguage = null;
 
         try {
-            chrome.runtime.sendMessage({
-                command: 'summarize',
-                input: selectedText
-            }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
+          chrome.runtime.sendMessage({
+              action: "sendButton",
+              command: "summarize",
+              parameter: selectedText
+          }, response => {
+            console.log('get back from summarize: ', response);
+              if (response && response.output) {
+                  this.showSuggestionSection(response.output);
+              } else {
+                  this.showSuggestionSection("Error fetching text");
+              }
+          });     
         } catch (error) {
             this.showSuggestionSection("Error fetching text");
         }
@@ -932,17 +930,18 @@ export class ChatWindow {
         this.lastLanguage = targetLanguage;
 
         try {
-            chrome.runtime.sendMessage({
-                command: 'translate',
-                input: selectedText,
-                language: targetLanguage
-            }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
+          chrome.runtime.sendMessage({
+              action: "sendButton",
+              command: "translate",
+              parameter: selectedText,
+              language: targetLanguage
+          }, response => {
+              if (response && response.output) {
+                  this.showSuggestionSection(response.output);
+              } else {
+                  this.showSuggestionSection("Error fetching text");
+              }
+          });
         } catch (error) {
             this.showSuggestionSection("Error fetching text");
         }
@@ -960,8 +959,9 @@ export class ChatWindow {
 
             try {
                 chrome.runtime.sendMessage({
-                    command: 'search',
-                    input: searchQuery
+                    action: "sendButton",
+                    command: "search",
+                    parameter: searchQuery
                 }, response => {
                     if (response && response.search_results && response.search_results[0]) {
                         this.showSuggestionSection(response.search_results[0]);
