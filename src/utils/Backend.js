@@ -473,8 +473,18 @@ async function handleAuthentication() {
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
+
         chrome.tabs.create({
             url: 'https://app.factful.io/extension'
         });
+       
+        chrome.windows.create({
+            url: chrome.runtime.getURL('welcome.html'),
+            type: 'popup',
+            width: 450,
+            height: 400
+        });
+       
+        
     }
 });

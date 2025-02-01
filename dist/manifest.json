@@ -47,7 +47,10 @@
         "assets/*",
         "*.css",
         "auth.html",
-        "auth.js"
+        "auth.js",
+        "welcome.html",
+        "welcome.css",
+        "welcome.js"
       ],
       "matches": ["<all_urls>"]
     }],
@@ -57,4 +60,3 @@
       ]
     }
   }
-  
