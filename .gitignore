@@ -8,7 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+dist/*
+!dist/login_widget.html
+!dist/login_widget.css
 !dist/manifest.json
 !dist/widget.css
 !dist/widget.html
