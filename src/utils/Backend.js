@@ -469,3 +469,12 @@ async function handleAuthentication() {
         chrome.tabs.onUpdated.removeListener(handleAuthComplete);
     }, 300000); // Auth expires after 5 min
 }
+
+
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === 'install') {
+        chrome.tabs.create({
+            url: 'https://app.factful.io/extension'
+        });
+    }
+});
