@@ -112,26 +112,6 @@ export function initializeGDocsTracker() {
       underline.applyUnderlines(corrections, true);
     }
 
-    function initiateAuthentication() {
-      console.log("[Authenticator] Initiating user authentication...");
-
-      window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
-    };
-
-    window.addEventListener('message', function(event) {
-      if (event.data.action && event.data.action === 'setFactfulAccessToken') {
-        if (event.data.payload.error) {
-          accessToken = null;
-          
-          console.log('[Authenticator] Error setting access token:', event.data.payload.error)
-        } else {
-          accessToken = event.data.payload.accessToken;
-
-          console.log('[Authenticator] Successfully received the access token:', event.data.payload);
-        }
-      }
-    });
-
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,
       getUnderlineElements: () => underline.underlineElements,
@@ -236,6 +216,22 @@ export function initializeGDocsTracker() {
             el.isHovered = false;
           }
         });
+      }
+    });
+
+    window.addEventListener('message', function(event) {
+      if (event.data.action && event.data.action === 'setFactfulAccessToken') {
+        if (event.data.payload.error) {
+          accessToken = null;
+          singlePill.changeAuthenticationState(false);
+          
+          console.log('[Authenticator] Error setting access token:', event.data.payload.error)
+        } else {
+          accessToken = event.data.payload.accessToken;
+          singlePill.changeAuthenticationState(true);
+
+          console.log('[Authenticator] Successfully received the access token:', event.data.payload);
+        }
       }
     });
 
