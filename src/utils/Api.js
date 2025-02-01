@@ -30,7 +30,7 @@ export class ApiService {
         fullText += lineText
       })
     })
-    console.log('full text: ', fullText);
+    console.log('[Enhanced Text Tracker] Full text: ', fullText);
     return fullText.trim()
   }
 
