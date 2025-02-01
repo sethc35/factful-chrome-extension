@@ -309,7 +309,10 @@ export function initializeGDocsTracker() {
         if (newApiData.error) {
           console.log("[Enhanced Text Tracker] Error fetching data", newApiData.error);
 
-          accessToken = null;
+          if (newApiData.error === "Unauthorized") {
+            accessToken = null;
+            singlePill.changeAuthenticationState(false);
+          }
 
           return;
         }
