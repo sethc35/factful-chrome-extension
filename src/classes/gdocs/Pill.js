@@ -2,7 +2,9 @@ export class Pill {
   constructor(numCorrections, corrections, handlers) {
       this.numCorrections = numCorrections;
       this.corrections = corrections || [];
+      this.pillContainer = null;
       this.pillElement = null;
+      this.tooltip = null;
       this.handlers = handlers;
       this.isAuthenticated = false;
       this.createPillElement();
@@ -16,18 +18,38 @@ export class Pill {
 
     console.log("[Pill] Changing authentication state to: ", isAuthenticated);
 
-    this.pillElement.style.backgroundColor = isAuthenticated ? "#4285f4" : "#fabc05";
+    if (isAuthenticated) {
+        this.tooltip.style.opacity = "0";
+    } else {
+        this.tooltip.style.opacity = "75";
+    }
+
+    if (this.pillElement.style.backgroundColor !== "rgb(234, 67, 53)") {
+        this.pillElement.style.backgroundColor = isAuthenticated ? "#4285f4" : "#fabc05";
+    }
   }
 
   createPillElement() {
+    this.pillContainer = document.createElement("div");
+    this.pillContainer.className = "enhanced-corrections-pill-container";
+    Object.assign(this.pillContainer.style, {
+        position: "fixed",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12.5px",
+        alignItems: "center",
+        justifyContent: "center",
+        left: "0px",
+        top: "0px",
+        visibility: "visible",
+        zIndex: "9999999",
+    });
+
     this.pillElement = document.createElement("div");
     this.pillElement.className = "enhanced-corrections-pill";
     Object.assign(this.pillElement.style, {
-        position: "fixed",
         width: "36px",
         height: "60px",
-        left: "0px",
-        top: "0px",
         borderRadius: "18px",
         backgroundColor: "#fabc05",
         display: "flex",
@@ -37,12 +59,10 @@ export class Pill {
         justifyContent: "center",
         boxShadow: "0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15)",
         cursor: "pointer",
-        zIndex: "9999999",
         transition: "all 150ms cubic-bezier(0.4,0,0.2,1)",
         overflow: "hidden",
         userSelect: "none",
-        willChange: "transform",
-        visibility: "visible",
+        willChange: "transform"
     });
 
     const pillNumber = document.createElement("div");
@@ -87,6 +107,7 @@ export class Pill {
 
     const starContainer = document.createElement("div");
     starContainer.className = "enhanced-corrections-pill-star-container";
+    starContainer.ariaLabel = "Open/close sidebar";
     Object.assign(starContainer.style, {
         width: "28px",
         height: "40px",
@@ -108,7 +129,46 @@ export class Pill {
     const authBtn = this.createAuthButton();
     this.pillElement.appendChild(authBtn);
 
-    document.body.appendChild(this.pillElement);
+    this.tooltip = document.createElement("div");
+    this.tooltip.className = "enhanced-corrections-pill-tooltip";
+    this.tooltip.textContent = "You are not signed in.";
+    Object.assign(this.tooltip.style, {
+        position: "relative",
+        display: 'flex',
+        width: '75px',
+        fontSize: '8px',
+        color: '#fff',
+        fontFamily: 'Inter',
+        backgroundColor: 'black',
+        padding: '5px 10px',
+        borderRadius: '5px',
+        fontSize: '12px',
+        opacity: 75,
+        textAlign: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
+        transition: 'all 0.3s ease-in-out'
+    });
+
+    const styles = document.createElement('style');
+    styles.textContent = `
+        .enhanced-corrections-pill-tooltip::after {
+            content: "";
+            position: absolute;
+            top: -9px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent transparent black transparent;
+        }
+    `
+    this.tooltip.appendChild(styles);
+
+    this.pillContainer.appendChild(this.pillElement);
+    this.pillContainer.appendChild(this.tooltip);
+
+    document.body.appendChild(this.pillContainer);
   }
 
   calculateOffset() {
@@ -123,14 +183,14 @@ export class Pill {
     const offsetLeft = pageRect.left - 50;
     const offsetTop = pageRect.top + 30;
 
-    this.pillElement.style.left = `${offsetLeft}px`;
-    this.pillElement.style.top = `${offsetTop}px`;
+    this.pillContainer.style.left = `${offsetLeft}px`;
+    this.pillContainer.style.top = `${offsetTop}px`;
 
     console.log('Pill positioning:', {
         pageRect,
         offsetLeft,
         offsetTop,
-        pillElement: this.pillElement.getBoundingClientRect()
+        pillElement: this.pillContainer.getBoundingClientRect()
     });
   }
 
@@ -204,10 +264,17 @@ export class Pill {
       starSvg.setAttribute("height", "16");
       starSvg.setAttribute("viewBox", "0 0 20 20");
       starSvg.setAttribute("fill", "none");
+
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = "Open/close sidebar";
+
       const starPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       starPath.setAttribute("d", "M10 0C10.3395 5.37596 14.624 9.66052 20 10C14.624 10.3395 10.3395 14.624 10 20C9.66052 14.624 5.37596 10.3395 0 10C5.37596 9.66052 9.66052 5.37596 10 0Z");
       starPath.setAttribute("fill", "#4285f4");
+
+      starSvg.prepend(title);
       starSvg.appendChild(starPath);
+
       return starSvg;
   }
 
@@ -242,6 +309,11 @@ export class Pill {
           "M256,512C128.502,512,24.774,408.272,24.774,280.774c0-84.49,46.065-162.23,120.216-202.879c12.006-6.577,27.057-2.18,33.633,9.816c6.577,11.997,2.182,27.055-9.814,33.633c-58.282,31.949-94.487,93.039-94.487,159.43c0,100.177,81.5,181.677,181.677,181.677s181.677-81.5,181.677-181.677c0-66.682-36.44-127.899-95.097-159.764c-12.022-6.532-16.475-21.573-9.943-33.595s21.572-16.475,33.595-9.944c74.631,40.542,120.992,118.444,120.992,203.304C487.226,408.272,383.498,512,256,512z",
           "M256,214.71c-13.682,0-24.774-11.092-24.774-24.774V24.774C231.226,11.092,242.318,0,256,0c13.682,0,24.774,11.092,24.774,24.774v165.161C280.774,203.617,269.682,214.71,256,214.71z"
       ];
+
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = "Power on/off";
+
+      svg.prepend(title);
 
       paths.forEach(d => {
           const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -288,6 +360,9 @@ export class Pill {
     svg.setAttribute("stroke-width", "0");
     svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
+    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+    title.textContent = "Sign in/log out";
+
     const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path1.setAttribute("d", "M0 0h24v24H0z");
     path1.setAttribute("fill", "none");
@@ -295,6 +370,7 @@ export class Pill {
     const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path2.setAttribute("d", "M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z");
 
+    svg.prepend(title)
     svg.appendChild(path1);
     svg.appendChild(path2);
 
@@ -305,10 +381,6 @@ export class Pill {
     console.log("[Authenticator] Initiating user authentication...");
 
     window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
-  }
-
-  handleAuthHover() {
-    
   }
 
   initializeSidebarBehavior(sidebarContainer) {
