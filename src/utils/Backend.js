@@ -12,9 +12,13 @@ Backend.fetchData = async function(textInput) {
             }
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        return { error: "Unauthorized" }
+                    }
+
+                    throw new Error(`[APIService] HTTP error! Status: ${response.status}`);
+                }
 
         const data = await response.json();
         console.log("Backend fetchData received data:", data);
@@ -212,7 +216,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "initiateAuthentication") {
-        handleAuthentication();
+        initiateAuthentication();
+        // handleAuthentication();
 
         sendResponse({ message: '[Authenticator] User authentication initiated' });
 
@@ -422,6 +427,8 @@ async function handleAuthentication() {
 
                     const accessToken = hashParams.get('access_token');
                     const expiresAt = hashParams.get('expires_at');
+                    const refreshToken = hashParams.get("refresh_token");
+                    const tokenType = hashParams.get("token_type");
 
                     if (accessToken && expiresAt) {
                         await chrome.storage.local.set({
@@ -461,5 +468,5 @@ async function handleAuthentication() {
 
     setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(handleAuthComplete);
-    }, 300000); // auth expires after 5 min
+    }, 300000); // Auth expires after 5 min
 }

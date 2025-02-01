@@ -45,7 +45,9 @@
     "web_accessible_resources": [{
       "resources": [
         "assets/*",
-        "*.css"
+        "*.css",
+        "auth.html",
+        "auth.js"
       ],
       "matches": ["<all_urls>"]
     }],
