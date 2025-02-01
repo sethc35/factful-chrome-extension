@@ -280,6 +280,7 @@ function injectRelayScript(tabId) {
                 });
                     
                 function relayData(data) {
+                    console.log('data relayed: ', data);
                     window.postMessage({ action: 'setFactfulAccessToken', payload: data }, '*');
                 }
                     
@@ -393,9 +394,100 @@ function isGoogleDocsTab(tabId, callback) {
     });
 }
 
-function initiateAuthentication() {
+function initiateAuthentication(gDocs = true) {
+    if (gDocs === true) {
+        handleAuthentication();
+        return;
+    }
+
     const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
     const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
 
     chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
+}
+
+async function handleAuthentication() {
+    // Store current tab info
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const originalUrl = currentTab.url;
+    const originalTabId = currentTab.id;
+
+    // Supabase authentication configuration
+    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
+    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
+    const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+    // Create authentication tab
+    const authTab = await chrome.tabs.create({ url: authUrl });
+
+    const handleAuthComplete = async (tabId, changeInfo, tab) => {
+        if (tabId === authTab.id && changeInfo.url) {
+            const newUrl = changeInfo.url;
+            
+            if (newUrl.startsWith('https://app.factful.io')) {
+                try {
+                    const hashParams = new URLSearchParams(new URL(newUrl).hash.substring(1));
+
+                    const accessToken = hashParams.get('access_token');
+                    const expiresAt = hashParams.get('expires_at');
+
+                    if (accessToken && expiresAt) {
+                        await chrome.storage.local.set({
+                            access_token: accessToken,
+                            expires_at: expiresAt,
+                            auth_url: newUrl
+                        });
+
+                        await chrome.scripting.executeScript({
+                            target: { tabId: originalTabId },
+                            func: (accessToken, expiresAt) => {
+                                if (typeof Cookies !== 'undefined') {
+                                    Cookies.set('access_token', accessToken, {
+                                        expires: new Date(parseInt(expiresAt) * 1000),
+                                        secure: true,
+                                        sameSite: 'strict'
+                                    });
+                                    
+                                    Cookies.set('expires_at', expiresAt, {
+                                        expires: new Date(parseInt(expiresAt) * 1000),
+                                        secure: true,
+                                        sameSite: 'strict'
+                                    });
+                                }
+                            },
+                            args: [accessToken, expiresAt]
+                        });
+
+                        await chrome.tabs.remove(authTab.id);
+
+                        if (originalTabId) {
+                            await chrome.tabs.update(originalTabId, {
+                                active: true,
+                                url: originalUrl
+                            });
+                        }
+
+                        chrome.tabs.onUpdated.removeListener(handleAuthComplete);
+
+                        return {
+                            success: true,
+                            accessToken,
+                            expiresAt,
+                            authUrl: newUrl
+                        };
+                    }
+                } catch (error) {
+                    console.error('Authentication error:', error);
+                    chrome.tabs.onUpdated.removeListener(handleAuthComplete);
+                    throw error;
+                }
+            }
+        }
+    };
+
+    chrome.tabs.onUpdated.addListener(handleAuthComplete);
+
+    setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(handleAuthComplete);
+    }, 300000);
 }
