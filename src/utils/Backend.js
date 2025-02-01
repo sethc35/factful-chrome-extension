@@ -31,6 +31,8 @@ Backend.sendCommand = async function(command, parameter) {
         const query = encodeURIComponent(parameter);
         let endpoint;
         let isSearch = false;
+        let isGenerate = false;
+        console.log('query + command: ', query, command);
         
         switch (command) {
             case '/synonym':
@@ -42,15 +44,28 @@ Backend.sendCommand = async function(command, parameter) {
             case '/search':
                 endpoint = 'quick_search';
                 isSearch = true;
+                isGenerate = false;
+                break;
+            case '/generate':
+                endpoint = 'generate-text';
+                isSearch = false;
+                isGenerate = true;
                 break;
             default:
-                throw new Error('Unknown command');
+                throw new Error('Unknown command (sendCommand)');
         }
 
-        // Different URL structure for search
-        const url = isSearch 
-            ? `https://backend.factful.io/${endpoint}/${query}`
-            : `https://backend.factful.io/${endpoint}?word=${query}`;
+        var url;
+        if (isSearch) {
+            url = `https://backend.factful.io/${endpoint}/${query}`;
+        } else if (isGenerate) {
+            console.log('generate exception hit')
+            url = `https://backend.factful.io/${endpoint}?prompt=${query}`;
+        } else {
+            url = `https://backend.factful.io/${endpoint}?word=${query}`;
+        }
+
+        console.log('url hitting: ', url);
 
         const response = await fetch(url, {
             method: 'GET',
@@ -58,6 +73,8 @@ Backend.sendCommand = async function(command, parameter) {
                 'Content-Type': 'application/json'
             }
         });
+
+        console.log(response, url);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -288,6 +305,7 @@ function validateAccessTokenForGoogleDocs(tabId) {
         const accessToken = data.access_token;
 
         if (accessToken) {
+            console.log(accessToken);
             const response = await fetch(`https://backend.factful.io/verify_access_token`, {
                 method: "GET",
                 headers: {

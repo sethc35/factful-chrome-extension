@@ -21,6 +21,12 @@ export class SlashCommand {
                 parameters: [
                     { name: 'word', type: 'text' }
                 ]
+            },
+            "/generate": {
+                description: "Generate text",
+                parameters: [
+                    { name: "word", type: "text" }
+                ]
             }
         }
         this.isActive = false
@@ -683,7 +689,12 @@ export class SlashCommand {
                 return this.createPopdown(response.antonyms, targetElement)
             }
             if (command === '/search' && response.search_results?.length) {
+                console.log(response);
                 return this.createPopdown(response.search_results, targetElement)
+            }
+            if (command === '/generate' && response.generated_text?.length) {
+                console.log(response);
+                return this.createPopdown(response.generated_text, targetElement)
             }
             return null
         } catch {
@@ -692,6 +703,8 @@ export class SlashCommand {
     }
 
     async createPopdown(items, targetElement) {
+        const itemsArray = Array.isArray(items) ? items : [items];
+        
         const popdown = document.createElement('div');
         popdown.style.position = 'fixed';
         popdown.style.backgroundColor = '#fff';
@@ -713,7 +726,7 @@ export class SlashCommand {
     
         let isProcessing = false;
     
-        items.forEach(item => {
+        itemsArray.forEach(item => {
             const btn = document.createElement('button');
             btn.textContent = item;
             btn.style.padding = '8px 12px';
