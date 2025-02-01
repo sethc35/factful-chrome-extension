@@ -176,7 +176,7 @@ export class ChatWindow {
         stroke-linecap: round;
         stroke-linejoin: round;
       }
-      .grammarly-caret {
+      .factful-caret {
         position: absolute;
         width: 8px;
         height: 8px;
@@ -257,6 +257,93 @@ export class ChatWindow {
     .search-button.disabled svg {
         stroke: #999;
     }
+    .tab-container {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+      background-color: #f8f8f8;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #71717a;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      color: #0177FC;
+      border-bottom-color: #0177FC;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .compose-section {
+      padding: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .compose-textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    }
+
+    .suggestion-container {
+      display: flex;
+      flex-direction: column;
+      height: 200px; /* Fixed height */
+      margin: 16px 0;
+    }
+
+    .suggestion-text {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 16px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .suggestion-buttons {
+      display: flex;
+      gap: 10px;
+      padding-top: 10px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .compose-button {
+      background-color: #0177FC;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .compose-button:hover {
+      background-color: #0156b3;
+    }
     `;
     document.head.appendChild(styleTag);
 
@@ -273,7 +360,7 @@ export class ChatWindow {
     starIcon.appendChild(starPolygon);
     header.appendChild(starIcon);
     const title = document.createElement("h3");
-    title.textContent = "Enhancements";
+    title.textContent = "Factful AI Actions";
     header.appendChild(title);
 
     const closeButton = document.createElement("button");
@@ -522,25 +609,42 @@ export class ChatWindow {
     searchContainer.appendChild(inputWrapper);
     searchContainer.appendChild(searchButton);
 
+    const tabContainer = document.createElement("div");
+    tabContainer.classList.add("tab-container");
 
-    this.chatWindow.appendChild(header);
-    this.chatWindow.appendChild(body);
+    const enhancementsTab = document.createElement("div");
+    enhancementsTab.classList.add("tab", "active");
+    enhancementsTab.textContent = "Enhancements";
+    enhancementsTab.dataset.tab = "enhancements";
+
+    const composeTab = document.createElement("div");
+    composeTab.classList.add("tab");
+    composeTab.textContent = "Compose";
+    composeTab.dataset.tab = "compose";
+
+    tabContainer.appendChild(enhancementsTab);
+    tabContainer.appendChild(composeTab);
+
+    const enhancementsContent = document.createElement("div");
+    enhancementsContent.classList.add("tab-content", "active");
+    enhancementsContent.id = "enhancements-content";
+    enhancementsContent.appendChild(body);
 
     this.suggestionSection = document.createElement("div");
     this.suggestionSection.classList.add("suggestion-section");
     this.suggestionSection.style.display = "none";
 
     const container = document.createElement("div");
-    container.style.display = "flex";
-    container.style.alignItems = "center";
-    container.style.gap = "10px";
-    container.style.margin = "16px 0";
+    container.classList.add("suggestion-container");
 
+    const textContainer = document.createElement("div");
+    textContainer.classList.add("suggestion-text");
     const placeholderText = document.createElement("p");
-    placeholderText.style.flex = "1";
-    placeholderText.style.fontSize = "14px";
-    placeholderText.style.color = "#333";
     placeholderText.textContent = "Placeholder Text";
+    textContainer.appendChild(placeholderText);
+
+    const buttonContainer = document.createElement("div");
+    buttonContainer.classList.add("suggestion-buttons");
 
     const acceptButton = document.createElement("button");
     acceptButton.classList.add("accept-suggestion");
@@ -552,16 +656,6 @@ export class ChatWindow {
     acceptButton.style.cursor = "pointer";
     acceptButton.textContent = "Accept";
 
-    const retryButton = document.createElement("button");
-    retryButton.classList.add("retry-suggestion");
-    retryButton.style.backgroundColor = "#0177FC";
-    retryButton.style.color = "#fff";
-    retryButton.style.border = "none";
-    retryButton.style.padding = "8px 12px";
-    retryButton.style.borderRadius = "6px";
-    retryButton.style.cursor = "pointer";
-    retryButton.textContent = "Retry";
-
     const deleteButton = document.createElement("button");
     deleteButton.classList.add("delete-suggestion");
     deleteButton.style.backgroundColor = "#f44336";
@@ -572,12 +666,40 @@ export class ChatWindow {
     deleteButton.style.cursor = "pointer";
     deleteButton.textContent = "Delete";
 
-    container.appendChild(placeholderText);
-    container.appendChild(acceptButton);
-    container.appendChild(retryButton);
-    container.appendChild(deleteButton);
+    buttonContainer.appendChild(acceptButton);
+    buttonContainer.appendChild(deleteButton);
+
+    container.appendChild(textContainer);
+    container.appendChild(buttonContainer);
     this.suggestionSection.appendChild(container);
-    this.chatWindow.appendChild(this.suggestionSection);
+    enhancementsContent.appendChild(this.suggestionSection);
+
+    const composeContent = document.createElement("div");
+    composeContent.classList.add("tab-content");
+    composeContent.id = "compose-content";
+
+    const composeSection = document.createElement("div");
+    composeSection.classList.add("compose-section");
+
+    const composeTextarea = document.createElement("textarea");
+    composeTextarea.classList.add("compose-textarea");
+    composeTextarea.placeholder = "Enter your prompt here...";
+
+    const composeButton = document.createElement("button");
+    composeButton.classList.add("compose-button");
+    composeButton.textContent = "Generate";
+
+    composeSection.appendChild(composeTextarea);
+    composeSection.appendChild(composeButton);
+    composeContent.appendChild(composeSection);
+
+    this.chatWindow.appendChild(header);
+    this.chatWindow.appendChild(tabContainer);
+    this.chatWindow.appendChild(enhancementsContent);
+    this.chatWindow.appendChild(composeContent);
+
+    this.initializeTabs();
+    this.initializeCompose();
 
     const researchSection = document.createElement("div");
     researchSection.classList.add("research-section");
@@ -872,6 +994,12 @@ export class ChatWindow {
     }
 
     if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+        el.focus();
+
+        if (el.selectionStart === el.selectionEnd) {
+            el.selectionStart = el.selectionEnd = el.value.length;
+        }
+        
         const cursorPos = el.selectionStart || el.value.length;
         const textBefore = el.value.substring(0, cursorPos);
         const textAfter = el.value.substring(cursorPos);
@@ -881,9 +1009,15 @@ export class ChatWindow {
         el.selectionEnd = newPos;
         el.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (el.contentEditable === 'true') {
+        el.focus();
+        
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
+            if (range.collapsed) {
+                range.selectNodeContents(el);
+                range.collapse(false);
+            }
             const textNode = document.createTextNode(text);
             range.insertNode(textNode);
             range.setStartAfter(textNode);
@@ -893,6 +1027,11 @@ export class ChatWindow {
         } else {
             const textNode = document.createTextNode(text);
             el.appendChild(textNode);
+            const range = document.createRange();
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
     }
   }
@@ -1138,35 +1277,6 @@ export class ChatWindow {
         }
     });
 
-    this.suggestionSection.querySelector(".retry-suggestion").addEventListener("click", () => {
-        if (!this.lastCommand || !this.lastInput) {
-            console.log('No previous command to retry');
-            return;
-        }
-
-        try {
-            const message = {
-                command: this.lastCommand,
-                input: this.lastInput
-            };
-
-            if (this.lastCommand === 'translate' && this.lastLanguage) {
-                message.language = this.lastLanguage;
-            }
-
-            chrome.runtime.sendMessage(message, response => {
-                if (response && (response.output || (response.search_results && response.search_results[0]))) {
-                    const result = response.output || response.search_results[0];
-                    this.showSuggestionSection(result);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
-        } catch (error) {
-            this.showSuggestionSection("Error fetching text");
-        }
-    });
-
     this.suggestionSection.querySelector(".delete-suggestion").addEventListener("click", () => {
         this.deleteSuggestion();
     });
@@ -1215,44 +1325,15 @@ export class ChatWindow {
   };
 
   showSuggestionSection(suggestionText) {
-    const suggestionTextElement = this.suggestionSection.querySelector("p");
+    const suggestionTextElement = this.suggestionSection.querySelector(".suggestion-text p");
     suggestionTextElement.textContent = suggestionText;
-    this.suggestionSection.style.display = "flex";
+    this.suggestionSection.style.display = "block";
   }
 
   acceptSuggestion() {
     const suggestionText = this.suggestionSection.querySelector("p").textContent;
     this.replaceHighlightedText(suggestionText);
     this.deleteSuggestion();
-  }
-
-  retrySuggestion() {
-    if (!this.lastCommand || !this.lastInput) {
-        console.log('No previous command to retry');
-        return;
-    }
-
-    try {
-        const message = {
-            command: this.lastCommand,
-            input: this.lastInput
-        };
-
-        if (this.lastCommand === 'translate' && this.lastLanguage) {
-            message.language = this.lastLanguage;
-        }
-
-        chrome.runtime.sendMessage(message, response => {
-            if (response && (response.output || (response.search_results && response.search_results[0]))) {
-                const result = response.output || response.search_results[0];
-                this.showSuggestionSection(result);
-            } else {
-                this.showSuggestionSection("Error fetching text");
-            }
-        });
-    } catch (error) {
-        this.showSuggestionSection("Error fetching text");
-    }
   }
 
   deleteSuggestion() {
@@ -1377,7 +1458,7 @@ export class ChatWindow {
 
   createCaret() {
     const div = document.createElement("div");
-    div.className = "grammarly-caret";
+    div.className = "factful-caret";
     div.innerHTML = ``;
     document.body.appendChild(div);
     return div;
@@ -1391,5 +1472,56 @@ export class ChatWindow {
       i++;
     }
     return selectionEnd;
+  }
+
+  initializeTabs() {
+    const tabs = this.chatWindow.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            this.chatWindow.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            tab.classList.add('active');
+            const contentId = `${tab.dataset.tab}-content`;
+            this.chatWindow.querySelector(`#${contentId}`).classList.add('active');
+        });
+    });
+}
+
+initializeCompose() {
+    const composeButton = this.chatWindow.querySelector('.compose-button');
+    const composeTextarea = this.chatWindow.querySelector('.compose-textarea');
+
+    composeButton.addEventListener('click', async () => {
+        const prompt = composeTextarea.value.trim();
+        if (!prompt) return;
+
+        composeButton.disabled = true;
+        composeButton.textContent = 'Generating...';
+
+        try {
+            chrome.runtime.sendMessage({
+                action: "sendCommand",
+                command: "/generate",
+                parameter: prompt
+            }, response => {
+                if (response && response.generated_text) {
+                    this.showSuggestionSection(response.generated_text);
+                    this.chatWindow.querySelector('[data-tab="enhancements"]').click();
+                } else {
+                    alert('Error generating text');
+                }
+                composeButton.disabled = false;
+                composeButton.textContent = 'Generate';
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error generating text');
+            composeButton.disabled = false;
+            composeButton.textContent = 'Generate';
+        }
+    });
   }
 }

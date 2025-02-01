@@ -3,43 +3,35 @@
 var Backend = Backend || {};
 
 Backend.fetchData = async function(textInput) {
-    console.log('[APIService] Processing text...');
-
     try {
-        chrome.storage.local.get("access_token", async (data) => {
-            const accessToken = data.access_token;
-
-            if (accessToken) {
-                const query = encodeURIComponent(textInput);
-                const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${data.access_token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        return { error: "Unauthorized" }
-                    }
-
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                return data || {};
-            } else {
-                return { error: 'Unauthorized' };
+        const query = encodeURIComponent(textInput);
+        const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
             }
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Backend fetchData received data:", data);
+        return data || {};
+
     } catch (error) {
+        console.log("fetchData() Error: " + error);
         return { error: error.message };
     }
 }
 
 Backend.sendCommand = async function(command, parameter) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+        return;
+    }
+    
     try {
         const query = encodeURIComponent(parameter);
         let endpoint;
@@ -391,6 +383,14 @@ function isGoogleDocsTab(tabId, callback) {
             return;
         }
         callback(tab.url.startsWith('https://docs.google.com'));
+    });
+}
+
+async function getAccessToken() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get("access_token", (data) => {
+            resolve(data.access_token);
+        });
     });
 }
 
