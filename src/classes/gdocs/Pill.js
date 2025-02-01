@@ -4,10 +4,19 @@ export class Pill {
       this.corrections = corrections || [];
       this.pillElement = null;
       this.handlers = handlers;
+      this.isAuthenticated = false;
       this.createPillElement();
       this.applyInitialStyles();
       this.attachEventListeners();
       this.calculateOffset();
+  }
+
+  changeAuthenticationState(isAuthenticated) {
+    this.isAuthenticated = isAuthenticated;
+
+    console.log("[Pill] Changing authentication state to: ", isAuthenticated);
+
+    this.pillElement.style.backgroundColor = isAuthenticated ? "#4285f4" : "#fabc05";
   }
 
   createPillElement() {
@@ -20,9 +29,10 @@ export class Pill {
         left: "0px",
         top: "0px",
         borderRadius: "18px",
-        backgroundColor: "#4285f4",
+        backgroundColor: "#fabc05",
         display: "flex",
         flexDirection: "column",
+        gap: "8px",
         alignItems: "center",
         justifyContent: "center",
         boxShadow: "0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15)",
@@ -34,6 +44,22 @@ export class Pill {
         willChange: "transform",
         visibility: "visible",
     });
+
+    const pillNumber = document.createElement("div");
+    pillNumber.className = "enhanced-corrections-pill-number";
+    Object.assign(pillNumber.style, {
+        marginTop: "5px",
+        color: "#fff",
+        fontSize: "14px",
+        fontFamily: "'Google Sans', Roboto, Arial, sans-serif",
+        fontWeight: "500",
+        textAlign: "center",
+        width: "100%",
+        zIndex: "1",
+        pointerEvents: "none",
+        display: "none"
+    });
+    this.pillElement.appendChild(pillNumber);
 
     const innerSection = document.createElement("div");
     innerSection.className = "inner-section";
@@ -59,23 +85,6 @@ export class Pill {
     innerSection.appendChild(logoImg);
     this.pillElement.appendChild(innerSection);
 
-    const pillNumber = document.createElement("div");
-    pillNumber.className = "enhanced-corrections-pill-number";
-    Object.assign(pillNumber.style, {
-        position: "absolute",
-        top: "8px",
-        color: "#fff",
-        fontSize: "14px",
-        fontFamily: "'Google Sans', Roboto, Arial, sans-serif",
-        fontWeight: "500",
-        textAlign: "center",
-        width: "100%",
-        zIndex: "1",
-        pointerEvents: "none",
-        display: "none"
-    });
-    this.pillElement.appendChild(pillNumber);
-
     const starContainer = document.createElement("div");
     starContainer.className = "enhanced-corrections-pill-star-container";
     Object.assign(starContainer.style, {
@@ -86,7 +95,6 @@ export class Pill {
         display: "none",
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: "8px",
         boxShadow: "0 1px 2px rgba(60,64,67,0.3)"
     });
 
@@ -96,6 +104,9 @@ export class Pill {
 
     const powerBtn = this.createPowerButton();
     this.pillElement.appendChild(powerBtn);
+
+    const authBtn = this.createAuthButton();
+    this.pillElement.appendChild(authBtn);
 
     document.body.appendChild(this.pillElement);
   }
@@ -247,6 +258,59 @@ export class Pill {
       window.location.reload();
   }
 
+  createAuthButton() {
+    const authBtn = document.createElement("div");
+    Object.assign(authBtn.style, {
+        width: "24px",
+        height: "24px",
+        borderRadius: "50%",
+        backgroundColor: "#fff",
+        display: "none",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 1px 2px rgba(60,64,67,0.3)"
+    });
+
+    const authSvg = this.createAuthSvg();
+    authBtn.appendChild(authSvg);
+
+    authBtn.addEventListener("click", this.handleAuthClick.bind(this));
+    return authBtn;
+  }
+
+  createAuthSvg() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "18");
+    svg.setAttribute("height", "18");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "#4285f4");
+    svg.setAttribute("stroke", "#4285f4");
+    svg.setAttribute("stroke-width", "0");
+    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+    const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path1.setAttribute("d", "M0 0h24v24H0z");
+    path1.setAttribute("fill", "none");
+
+    const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path2.setAttribute("d", "M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z");
+
+    svg.appendChild(path1);
+    svg.appendChild(path2);
+
+    return svg;
+  }
+
+  handleAuthClick() {
+    console.log("[Authenticator] Initiating user authentication...");
+
+    window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
+  }
+
+  handleAuthHover() {
+    
+  }
+
   initializeSidebarBehavior(sidebarContainer) {
     const tabButtons = sidebarContainer.querySelectorAll('.tab-button');
     const tabContents = sidebarContainer.querySelectorAll('.tab-content');
@@ -295,11 +359,11 @@ export class Pill {
     
     if (this.numCorrections > 0) {
         this.pillElement.style.backgroundColor = "#EA4335";
-        this.pillElement.style.height = "110px";
+        this.pillElement.style.height = "90px";
         pillNumber.textContent = String(this.numCorrections);
         pillNumber.style.display = "block";
     } else {
-        this.pillElement.style.backgroundColor = "#4285f4";
+        this.pillElement.style.backgroundColor = this.isAuthenticated ? "#4285F4" : "#fabc05";
         this.pillElement.style.height = "60px";
         pillNumber.textContent = "";
         pillNumber.style.display = "none";
@@ -309,7 +373,8 @@ export class Pill {
   attachEventListeners() {
     const innerSection = this.pillElement.querySelector(".inner-section");
     const starContainer = this.pillElement.querySelector(".enhanced-corrections-pill-star-container");
-    const powerBtn = this.pillElement.querySelector("div > div:last-child");
+    const powerBtn = this.pillElement.querySelector("div > div:nth-last-child(2)");
+    const authBtn = this.pillElement.querySelector("div > div:last-child");
 
     starContainer.addEventListener("click", () => {
         let sidebarContainer = document.getElementById('factful-sidebar-container');
@@ -825,21 +890,23 @@ export class Pill {
     });
 
     this.pillElement.addEventListener("mouseenter", () => {
-        const currentHeight = this.pillElement.style.backgroundColor === "rgb(234, 67, 53)" ? "130px" : "90px";
+        const currentHeight = this.pillElement.style.backgroundColor === "rgb(234, 67, 53)" ? "150px" : "120px";
         this.pillElement.style.height = currentHeight;
         this.pillElement.style.transform = "scale(1.05)";
         innerSection.style.display = "none";
         starContainer.style.display = "flex";
         powerBtn.style.display = "flex";
+        authBtn.style.display = "flex";
     });
 
     this.pillElement.addEventListener("mouseleave", () => {
-        const defaultHeight = this.pillElement.style.backgroundColor === "rgb(234, 67, 53)" ? "110px" : "60px";
+        const defaultHeight = this.pillElement.style.backgroundColor === "rgb(234, 67, 53)" ? "90px" : "60px";
         this.pillElement.style.height = defaultHeight;
         this.pillElement.style.transform = "scale(1)";
         innerSection.style.display = "flex";
         starContainer.style.display = "none";
         powerBtn.style.display = "none";
+        authBtn.style.display = "none";
     });
 
     window.addEventListener('scroll', () => {
