@@ -44,7 +44,7 @@ export class Pill {
         left: "0px",
         top: "0px",
         visibility: "visible",
-        zIndex: "40",
+        zIndex: "100", // 50 covers both, 100 overrides tab, 9999999 overrides everything
     });
 
     this.pillElement = document.createElement("div");
@@ -482,35 +482,108 @@ export class Pill {
             const tabs = document.createElement('div');
             tabs.className = 'tabs';
 
+            const content = document.createElement('div');
+            content.className = 'content';
+
             const suggestionTab = document.createElement('button');
             suggestionTab.className = 'tab-button active';
             suggestionTab.setAttribute('data-tab', 'suggestions');
-    
-            const tabIcon = document.createElement('span');
-            tabIcon.className = 'tab-icon active';
-            
+
+            const suggestionIcon = document.createElement('span');
+            suggestionIcon.className = 'tab-icon active';
+
+            const suggestionSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            suggestionSvg.setAttribute('width', '12');
+            suggestionSvg.setAttribute('height', '12');
+            suggestionSvg.setAttribute('viewBox', '0 0 24 24');
+            suggestionSvg.setAttribute('fill', 'none');
+            suggestionSvg.setAttribute('stroke', 'currentColor');
+            suggestionSvg.setAttribute('stroke-width', '2');
+
+            const suggestionPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            suggestionPath.setAttribute('d', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z');
+            suggestionSvg.appendChild(suggestionPath);
+            suggestionIcon.appendChild(suggestionSvg);
+
+            const suggestionText = document.createElement('span');
+            suggestionText.textContent = 'Suggestions';
+
+            suggestionTab.appendChild(suggestionIcon);
+            suggestionTab.appendChild(suggestionText);
+
+            const composeTab = document.createElement('button');
+            composeTab.className = 'tab-button';
+            composeTab.setAttribute('data-tab', 'compose');
+
+            const composeIcon = document.createElement('span');
+            composeIcon.className = 'tab-icon';
+
+            const composeSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            composeSvg.setAttribute('width', '12');
+            composeSvg.setAttribute('height', '12');
+            composeSvg.setAttribute('viewBox', '0 0 24 24');
+            composeSvg.setAttribute('fill', 'none');
+            composeSvg.setAttribute('stroke', 'currentColor');
+            composeSvg.setAttribute('stroke-width', '2');
+
+            const composePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            composePath.setAttribute('d', 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z');
+            composeSvg.appendChild(composePath);
+            composeIcon.appendChild(composeSvg);
+
+            const composeText = document.createElement('span');
+            composeText.textContent = 'Compose';
+
+            composeTab.appendChild(composeIcon);
+            composeTab.appendChild(composeText);
+
+            const composeContent = document.createElement('div');
+            composeContent.id = 'compose';
+            composeContent.className = 'tab-content hidden';
+
+            const chatContainer = document.createElement('div');
+            chatContainer.className = 'chat-container';
+
+            const messagesContainer = document.createElement('div');
+            messagesContainer.className = 'messages-container';
+
+            const inputContainer = document.createElement('div');
+            inputContainer.className = 'input-container';
+
+            const chatInput = document.createElement('textarea');
+            chatInput.className = 'chat-input';
+            chatInput.placeholder = 'Type your message...';
+
+            const sendButton = document.createElement('button');
+            sendButton.className = 'send-button';
+
             const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            svg.setAttribute('width', '12');
-            svg.setAttribute('height', '12');
+            svg.setAttribute('width', '24');
+            svg.setAttribute('height', '24');
             svg.setAttribute('viewBox', '0 0 24 24');
             svg.setAttribute('fill', 'none');
             svg.setAttribute('stroke', 'currentColor');
             svg.setAttribute('stroke-width', '2');
-    
-            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            path.setAttribute('d', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z');
-            svg.appendChild(path);
-            tabIcon.appendChild(svg);
-    
-            const tabText = document.createElement('span');
-            tabText.textContent = 'Suggestions';
-    
-            suggestionTab.appendChild(tabIcon);
-            suggestionTab.appendChild(tabText);
-            tabs.appendChild(suggestionTab);
 
-            const content = document.createElement('div');
-            content.className = 'content';
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute('d', 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z');
+
+            svg.appendChild(path);
+            sendButton.appendChild(svg);
+
+            inputContainer.appendChild(chatInput);
+            inputContainer.appendChild(sendButton);
+            chatContainer.appendChild(messagesContainer);
+            chatContainer.appendChild(inputContainer);
+            composeContent.appendChild(chatContainer);
+
+            tabs.appendChild(suggestionTab);
+            tabs.appendChild(composeTab);
+
+            content.appendChild(composeContent);
+            sidebar.appendChild(tabs);
+            sidebar.appendChild(content);
+            sidebarContainer.appendChild(sidebar);
     
             const suggestionsContent = document.createElement('div');
             suggestionsContent.id = 'suggestions';
@@ -555,6 +628,25 @@ export class Pill {
             sidebar.appendChild(tabs);
             sidebar.appendChild(content);
             sidebarContainer.appendChild(sidebar);
+
+            const sendMessage = () => {
+                const message = chatInput.value.trim();
+                if (message) {
+                    this.handleMessage(message);
+                    chatInput.value = '';
+                }
+            };
+
+            sendButton.addEventListener('click', sendMessage);
+
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            document.body.appendChild(sidebarContainer);
             document.body.appendChild(sidebarContainer);
 
             const grammarCount = this.corrections?.filter(c => c.error_type === 'Grammar').length || 0;
@@ -959,6 +1051,91 @@ export class Pill {
 
             .label-dot.factuality {
                 background-color: #99ccff;
+            }
+                
+            .chat-container {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 100px);
+                background: white;
+            }
+
+            .messages-container {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .message {
+                max-width: 80%;
+                padding: 12px 16px;
+                border-radius: 12px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+
+            .message.user {
+                align-self: flex-end;
+                background: #0177FC;
+                color: white;
+            }
+
+            .message.bot {
+                align-self: flex-start;
+                background: #F3F4F6;
+                color: #111827;
+            }
+
+            .input-container {
+                display: flex;
+                gap: 8px;
+                padding: 16px;
+                background: white;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            .chat-input {
+                flex: 1;
+                padding: 12px;
+                border: 1px solid #D2E7FE;
+                border-radius: 8px;
+                resize: none;
+                font-size: 14px;
+                line-height: 1.4;
+                max-height: 120px;
+                min-height: 48px;
+            }
+
+            .chat-input:focus {
+                outline: none;
+                border-color: #0177FC;
+                box-shadow: 0 0 0 3px rgba(1, 119, 252, 0.2);
+            }
+
+            .send-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                border: none;
+                border-radius: 8px;
+                background: #0177FC;
+                color: white;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+
+            .send-button:hover {
+                background: #0056b3;
+            }
+
+            .send-button svg {
+                width: 20px;
+                height: 20px;
             }`;
             sidebarContainer.appendChild(styles);
     
@@ -1024,6 +1201,52 @@ export class Pill {
         attributeFilter: ['class']
     });
   }
+
+  async handleMessage(message) {
+        const messagesContainer = document.querySelector('.messages-container');
+
+        const userMessage = document.createElement('div');
+        userMessage.className = 'message user';
+        userMessage.textContent = message;
+        messagesContainer.appendChild(userMessage);
+
+        try {
+            const response = await this.makeApiCall(message);
+
+            const botMessage = document.createElement('div');
+            botMessage.className = 'message bot';
+            botMessage.textContent = response;
+            messagesContainer.appendChild(botMessage);
+        } catch (error) {
+            console.error('Error:', error);
+
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'message bot';
+            errorMessage.textContent = 'Sorry, there was an error processing your message.';
+            messagesContainer.appendChild(errorMessage);
+        }
+
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    async makeApiCall(message) {
+        const response = await fetch(`https://backend.factful.io/generate-html?prompt=${message}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('response tuah from html: ', response);
+        console.log('response tuah from html: ', response.generated_text);
+
+        if (!response.ok) {
+            throw new Error('API call failed');
+        }
+
+        const data = await response.json();
+        return data.response;
+    }
 
   updateCorrections(numCorrections, newCorrections) {
     this.numCorrections = numCorrections;

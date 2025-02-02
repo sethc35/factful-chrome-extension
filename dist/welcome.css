@@ -1,0 +1,94 @@
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: white;
+}
+
+.container {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 32px;
+    padding: 20px;
+    background: #F7F9FD;
+    border-radius: 8px;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+}
+
+.icon {
+    width:10px;
+    height:10px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    font-size: 24px;
+}
+
+.brand-name {
+    color: #170045;
+    font-weight: 700;
+}
+
+.brand-for {
+    margin-left: 8px;
+    color: #170045;
+    font-weight: 300;
+}
+
+.brand-chrome {
+    margin-left: 4px;
+    color: #0085FF;
+    font-weight: 300;
+}
+
+.message {
+    color: black;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    font-weight: 400;
+}
+
+.pin-icon {
+    display: inline-block;
+    margin: 0 4px;
+    font-size: 18px;
+}
+
+.dismiss-button {
+    background: linear-gradient(to right, #e6f2ff 0%, #e6f2ff 100%);
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #0085FF;
+    font-weight: 500;
+}
+
+.dismiss-button:hover {
+    background: #e5f1ff;
+}
