@@ -16,7 +16,7 @@
 }
 
 .text-blue {
-    color: rgba(23, 0, 69, 1);
+    color: rgba(0, 133, 255, 1);
 }
 
 .text-white {
@@ -58,7 +58,22 @@
 }
 
 #missing-perks {
-    background: linear-gradient(to right, rgba(0, 57, 168, 1), rgba(22, 0, 66, 1));
+    background:
+        url("assets/circle.svg"),
+        linear-gradient(to right, rgba(0, 57, 168, 1), rgba(22, 0, 66, 1));
+    background-position: 
+        right top 10px,
+        0 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    font-weight: 100;
+    font-size: 0.6rem;
+    align-items: center;
+}
+
+#lightning {
+    height: 2rem;
+    width: 2rem;
 }
 
 #login-details {
