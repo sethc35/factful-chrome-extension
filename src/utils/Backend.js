@@ -475,7 +475,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
 
         chrome.tabs.create({
-            url: 'https://app.factful.io/extension'
+            url: 'https://factful.io/extension'
         });
        
         chrome.windows.create({
