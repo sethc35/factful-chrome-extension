@@ -20,8 +20,10 @@ export class Pill {
 
     if (isAuthenticated) {
         this.tooltip.style.opacity = "0";
+        this.tooltip.style.display = "none";
     } else {
         this.tooltip.style.opacity = "75";
+        this.tooltip.style.display = "block";
     }
 
     if (this.pillElement.style.backgroundColor !== "rgb(234, 67, 53)") {
@@ -146,7 +148,8 @@ export class Pill {
         textAlign: 'center',
         justifyContent: 'center',
         alignItems: 'center',
-        transition: 'all 0.3s ease-in-out'
+        transition: 'all 0.3s ease-in-out',
+        boxShadow: '0 1px 2px rgba(60,64,67,0.3)'
     });
 
     const styles = document.createElement('style');
