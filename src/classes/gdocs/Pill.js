@@ -179,7 +179,7 @@ export class Pill {
 
     const pageRect = page.getBoundingClientRect();
     
-    const offsetLeft = pageRect.left - 50;
+    const offsetLeft = pageRect.left - 75;
     const offsetTop = pageRect.top + 30;
 
     this.pillContainer.style.left = `${offsetLeft}px`;
