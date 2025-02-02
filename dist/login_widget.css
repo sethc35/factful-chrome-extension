@@ -33,6 +33,7 @@
 
 .text-lg {
     font-size: 1.5rem;
+    line-height: 1.5rem;
 }
 
 .text-center {
@@ -42,7 +43,7 @@
 #login-widget {
     gap: 1rem;
     background-color: white;
-    border: 1px solid black;
+    border-radius: 1rem;
     width: 350px;
     padding: 1rem;
     font-family: 'Inter';
@@ -50,6 +51,9 @@
 
 #factful-banner {
     background-color: rgba(247, 249, 253, 1);
+    justify-content: center;
+    align-items: flex-end;
+    gap: 0.4rem;
 }
 
 #factful-logo {
