@@ -11,6 +11,7 @@ node_modules
 dist/*
 !dist/login_widget.html
 !dist/login_widget.css
+!dist/login_widget.js
 !dist/manifest.json
 !dist/widget.css
 !dist/widget.html

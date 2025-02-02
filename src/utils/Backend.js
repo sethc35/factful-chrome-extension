@@ -276,8 +276,7 @@ function injectRelayScript(tabId) {
 
                 window.addEventListener('message', (event) => {
                     if (event.data.action === 'initiateFactfulAuthentication') {
-                        console.log('[Authenticator] Authentication initiation request recieved.');
-
+                        console.log('[Authenticator] Authentication initiation request received.');
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
                     }
                 });
@@ -490,7 +489,7 @@ async function handleAuthentication() {
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
         chrome.tabs.create({
-            url: 'https://factful.io/extension'
+            url: 'https://app.factful.io/extension'
         });
        
         chrome.windows.create({

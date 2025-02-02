@@ -312,3 +312,13 @@ input:checked + .slider-toggle:before {
 .hidden {
     display: none;
 }
+
+.status {
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.status.disabled {
+    opacity: 0.5;
+}

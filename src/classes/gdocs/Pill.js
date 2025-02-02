@@ -381,7 +381,6 @@ export class Pill {
 
   handleAuthClick() {
     console.log("[Authenticator] Initiating user authentication...");
-
     window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
   }
 
