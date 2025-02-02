@@ -37,7 +37,7 @@
         "48": "assets/factful-icon-transparent.png",
         "128": "assets/factful-icon-transparent.png"
       },
-      "default_popup": "widget.html"
+      "default_popup": "login_widget.html"
     },
     "content_security_policy": {
       "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://backend.factful.io"
