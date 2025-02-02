@@ -44,7 +44,7 @@ export class Pill {
         left: "0px",
         top: "0px",
         visibility: "visible",
-        zIndex: "9999999",
+        zIndex: "40",
     });
 
     this.pillElement = document.createElement("div");
