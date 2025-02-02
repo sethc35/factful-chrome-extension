@@ -144,6 +144,18 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+
+    const browserName = (() => {
+        if (navigator.userAgent.includes("Firefox")) return "Firefox";
+        if (navigator.userAgent.includes("Edge")) return "Edge";
+        if (navigator.userAgent.includes("Opera")) return "Opera";
+        if (navigator.userAgent.includes("Chrome")) return "Chrome";
+        if (navigator.userAgent.includes("Safari")) return "Safari";
+        return "Chrome"; 
+    })();
+    
+    document.getElementById('browser-name').textContent = browserName;
+
     debug('Widget initialized');
 
     const currentTab = await getCurrentTab();
