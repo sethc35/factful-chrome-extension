@@ -327,10 +327,19 @@ export class Pill {
   }
 
   handlePowerClick() {
-      const currentState = JSON.parse(localStorage.getItem("factful-extension-can-run"));
-      localStorage.setItem("factful-extension-can-run", JSON.stringify(!currentState));
-      window.location.reload();
+    let enabled = localStorage.getItem('canFactfulRun');
+    if (enabled === null) {
+        enabled = false;
+    } else {
+        enabled = JSON.parse(enabled);
+    }
+
+    localStorage.setItem('canFactfulRun', JSON.stringify(!enabled));
+    
+    console.log(`Set canFactfulRun to ${!enabled}`);
+    window.location.reload();
   }
+
 
   createAuthButton() {
     const authBtn = document.createElement("div");

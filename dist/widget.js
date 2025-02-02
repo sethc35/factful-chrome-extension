@@ -10,9 +10,7 @@ const DEFAULT_SETTINGS = {
 };
 
 function saveSettings(settings) {
-    chrome.storage.sync.set(settings, () => {
-        debug('Settings saved');
-    });
+    return chrome.storage.sync.set(settings);
 }
 
 function loadSettings() {
@@ -38,16 +36,20 @@ function getDomainFromUrl(url) {
 }
 
 function updatePowerStatus(isEnabled) {
-    const statusContainer = document.querySelector('.status');
-    const statusText = document.querySelector('.status div:last-child');
+    const powerButtons = document.querySelectorAll('.status, .power-button');
+    const statusTexts = document.querySelectorAll('.status div:last-child, .power-status-text');
     
-    if (isEnabled) {
-        statusContainer.classList.remove('disabled');
-        statusText.textContent = 'Factful is enabled for this site';
-    } else {
-        statusContainer.classList.add('disabled');
-        statusText.textContent = 'Factful is disabled for this site';
-    }
+    powerButtons.forEach(button => {
+        if (isEnabled) {
+            button.classList.remove('disabled');
+        } else {
+            button.classList.add('disabled');
+        }
+    });
+    
+    statusTexts.forEach(text => {
+        text.textContent = isEnabled ? 'Factful is enabled for this site' : 'Factful is disabled for this site';
+    });
 }
 
 function applySettings(settings, currentDomain) {
@@ -69,6 +71,58 @@ function applySettings(settings, currentDomain) {
     updatePowerStatus(isEnabled);
 }
 
+async function togglePower(currentDomain, currentTab) {
+    const currentSettings = await loadSettings();
+    const isCurrentlyEnabled = !currentSettings.disabledDomains.includes(currentDomain);
+    
+    let newDisabledDomains;
+    if (isCurrentlyEnabled) {
+        newDisabledDomains = [...currentSettings.disabledDomains, currentDomain];
+    } else {
+        newDisabledDomains = currentSettings.disabledDomains.filter(domain => domain !== currentDomain);
+    }
+    
+    await saveSettings({
+        ...currentSettings,
+        disabledDomains: newDisabledDomains
+    });
+    
+    updatePowerStatus(!isCurrentlyEnabled);
+
+    if (currentDomain === 'docs.google.com') {
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: currentTab.id },
+                func: (enabled) => {
+                    localStorage.setItem('canFactfulRun', enabled.toString());
+                },
+                args: [!isCurrentlyEnabled]
+            });
+        } catch (err) {
+            console.error('Failed to set localStorage:', err);
+        }
+    }
+    
+    chrome.tabs.reload(currentTab.id);
+}
+
+async function initializePowerButtons(currentDomain, currentTab) {
+    const powerButtons = document.querySelectorAll('.status, .power-button');
+    powerButtons.forEach(button => {
+        button.addEventListener('click', () => togglePower(currentDomain, currentTab));
+    });
+}
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync' && changes.disabledDomains) {
+        getCurrentTab().then(tab => {
+            const domain = getDomainFromUrl(tab.url);
+            const isEnabled = !changes.disabledDomains.newValue.includes(domain);
+            updatePowerStatus(isEnabled);
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     debug('Widget initialized');
 
@@ -77,6 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settings = await loadSettings();
     
     applySettings(settings, currentDomain);
+    await initializePowerButtons(currentDomain, currentTab);
 
     const outputButtons = document.querySelectorAll('.output-type .option-button');
     outputButtons.forEach(button => {
@@ -92,50 +147,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const languageSelect = document.querySelector('.language-select');
-    languageSelect.addEventListener('change', (e) => {
-        saveSettings({
-            ...settings,
-            language: e.target.value
-        });
-    });
-
-    const powerButton = document.querySelector('.status');
-    powerButton.addEventListener('click', async () => {
-        const currentSettings = await loadSettings();
-        const isCurrentlyEnabled = !currentSettings.disabledDomains.includes(currentDomain);
-        
-        let newDisabledDomains;
-        if (isCurrentlyEnabled) {
-            newDisabledDomains = [...currentSettings.disabledDomains, currentDomain];
-        } else {
-            newDisabledDomains = currentSettings.disabledDomains.filter(domain => domain !== currentDomain);
-        }
-        
-        await saveSettings({
-            ...currentSettings,
-            disabledDomains: newDisabledDomains
-        });
-        
-        updatePowerStatus(!isCurrentlyEnabled);
-    
-        if (currentDomain === 'docs.google.com') {
-            chrome.scripting.executeScript({
-                target: { tabId: currentTab.id },
-                func: (enabled) => {
-                    localStorage.setItem('canFactfulRun', enabled.toString());
-                    console.log(`Set canFactfulRun to ${enabled}`);
-                },
-                args: [!isCurrentlyEnabled]
-            }).then(() => {
-                chrome.tabs.reload(currentTab.id);
-            }).catch(err => {
-                console.error('Failed to set localStorage:', err);
-                chrome.tabs.reload(currentTab.id);
+    if (languageSelect) {
+        languageSelect.addEventListener('change', (e) => {
+            saveSettings({
+                ...settings,
+                language: e.target.value
             });
-        } else {
-            chrome.tabs.reload(currentTab.id);
-        }
-    });
+        });
+    }
 
     document.querySelector('.widget-container').addEventListener('click', (e) => {
         debug(`Click detected on element: ${e.target.tagName} with classes: ${e.target.className}`);
