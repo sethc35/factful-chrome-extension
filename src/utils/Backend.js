@@ -35,7 +35,7 @@ Backend.sendCommand = async function(command, parameter) {
     if (!accessToken) {
         return;
     }
-    
+
     try {
         const query = encodeURIComponent(parameter);
         let endpoint;
@@ -330,15 +330,20 @@ function validateAccessTokenForGoogleDocs(tabId) {
                 chrome.storage.local.remove("access_token");
 
                 relayData({ error: "Failed to verify access token" }, tabId);
+                chrome.action.setPopup({ popup: "login_widget.html" });
+
             } else {
                 console.log('[Authenticator] Response received from API: ', data.data);
 
                 relayData({ session: data.data, accessToken: accessToken }, tabId);
+                chrome.action.setPopup({ popup: "widget.html" });
             }
         } else {
             console.log('[Authenticator] No access token found.');
                 
             relayData({ error: "Access token does not exist" }, tabId);
+            chrome.action.setPopup({ popup: "login_widget.html" });
+
         }
     });
 }
