@@ -19,18 +19,17 @@ function initializeExtension() {
   let observer = null
   let tooltipVisible = false
   let lastTooltipId = null
-  let accessToken = null
 
   const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'setAccessToken') {
       if (request.error) {
-        accessToken = null
+        pill.changeAuthenticationState(false)
 
         console.log('[Authenticator] Error setting access token:', request.error)
       } else {
-        accessToken = request.accessToken
+        pill.changeAuthenticationState(true)
 
         console.log('[Authenticator] Successfully received the access token', request)
       }
@@ -49,12 +48,6 @@ function initializeExtension() {
       }, wait)
     }
   }
-
-  function initiateAuthentication() {
-    console.log("[Authenticator] Initiating user authentication...");
-
-    chrome.runtime.sendMessage({ action: 'initiateAuthentication' }, '*');
-  };
 
   async function fetchDataFromBackend(element) {
     const text = element.value || element.textContent || ''

@@ -217,9 +217,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.action === "initiateAuthentication") {
         initiateAuthentication();
-        // handleAuthentication();
 
-        sendResponse({ message: '[Authenticator] User authentication initiated' });
+        sendResponse({ message: 'User authentication initiated' });
 
         return true;
     }
@@ -473,7 +472,6 @@ async function handleAuthentication() {
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-
         chrome.tabs.create({
             url: 'https://app.factful.io/extension'
         });
@@ -484,7 +482,5 @@ chrome.runtime.onInstalled.addListener((details) => {
             width: 450,
             height: 400
         });
-       
-        
     }
 });
