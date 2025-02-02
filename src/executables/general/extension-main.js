@@ -6,7 +6,7 @@ import { SlashCommand } from '../../classes/general/SlashCommand.js'
 import { Tooltip } from '../../classes/general/Tooltip.js'
 import { Underline } from '../../classes/general/Underline.js'
 
-function initializeExtension() {
+async function initializeExtension() {
   let activeElement = null
   let hoveredUnderline = null
   let currentHoverElement = null
@@ -19,6 +19,20 @@ function initializeExtension() {
   let observer = null
   let tooltipVisible = false
   let lastTooltipId = null
+
+  const settings = await chrome.storage.sync.get({ disabledDomains: [] });
+  const disabledDomains = settings.disabledDomains;
+
+  const currentUrl = window.location.href;
+  const baseUrl = new URL(currentUrl).hostname;
+
+  console.log('[Initialize] Current domain:', baseUrl);
+  console.log('[Initialize] Disabled domains:', disabledDomains);
+
+  if (disabledDomains.includes(baseUrl)) {
+      console.log('[Initialize] Extension is disabled for this domain');
+      return;
+  }
 
   const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
 

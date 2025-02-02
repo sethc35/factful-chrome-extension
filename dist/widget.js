@@ -132,6 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('Failed to set localStorage:', err);
                 chrome.tabs.reload(currentTab.id);
             });
+        } else {
+            chrome.tabs.reload(currentTab.id);
         }
     });
 

@@ -2,6 +2,16 @@
 
 var Backend = Backend || {};
 
+async function returnSettings() {
+    const settings = await chrome.storage.sync.get({
+        disabledDomains: [],
+        outputType: 'detailed',
+        language: 'en-US'
+    });
+
+    return settings;
+}
+
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
