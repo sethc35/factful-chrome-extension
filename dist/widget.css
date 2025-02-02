@@ -308,3 +308,7 @@ input:checked + .slider-toggle:before {
     align-items: center;
     gap: 8px;
 }
+
+.hidden {
+    display: none;
+}

@@ -222,6 +222,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         return true;
     }
+
+    if (message.action === "getAccessToken") {
+        chrome.storage.local.get("access_token", (data) => {
+            sendResponse({ access_token: data.access_token || null });
+        });
+        return true;
+    }
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -370,6 +377,7 @@ function validateAccessToken(tabId) {
                 chrome.storage.local.remove("access_token");
 
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", error: "Failed to verify access token" });
+                chrome.action.setPopup({ popup: "login_widget.html" });
             } else {
                 console.log('[Authenticator] Response received from API: ', data.data);
                 const userId = data.data.user.id;
@@ -377,6 +385,7 @@ function validateAccessToken(tabId) {
                     console.log('User ID saved:', userId);
                 });
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", session: data.data, accessToken: accessToken });
+                chrome.action.setPopup({ popup: "widget.html" });
             }
         } else {
             console.log('[Authenticator] No access token found.');

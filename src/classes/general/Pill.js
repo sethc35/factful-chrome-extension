@@ -14,8 +14,22 @@ export class Pill {
 
         document.addEventListener("focusin", (event) => {
             if (this.shouldShowPill(event.target)) {
-                console.log('pill showing')
+                console.log('pill showing');
                 this.showAtElement(event.target);
+            } else {
+                this.hide();
+            }
+        });    
+
+        document.addEventListener("focusout", (event) => {
+            if (!this.shouldShowPill(event.target)) {
+                this.hide();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!this.shouldShowPill(event.target)) {
+                this.hide();
             }
         });
 
@@ -160,16 +174,22 @@ export class Pill {
     }
 
     showAtElement(element) {
+        if (!this.shouldShowPill(element)) {
+            this.hide();
+            return;
+        }
+    
         if (this.activeElement && this.resizeObserver) {
             this.resizeObserver.unobserve(this.activeElement);
         }
-
+    
         this.activeElement = element;
         this.resizeObserver.observe(element);
         this.updatePosition();
+
         this.overlayContainer.style.display = 'block';
         this.pill.style.display = 'flex';
-
+    
         if (this.isChatWindowOpen) {
             this.chatWindow.enableHighlighting();
         }
@@ -199,7 +219,10 @@ export class Pill {
         
         this.overlayContainer.style.display = 'none';
         this.activeElement = null;
-        this.chatWindow.disableHighlighting();
+        
+        if (this.chatWindow) {
+            this.chatWindow.disableHighlighting();
+        }
     }
 
     isTextInput(element) {
@@ -254,21 +277,17 @@ export class Pill {
     }
 
     shouldShowPill(element) {
-        if (element.tagName === 'INPUT') {
+        if (element.tagName === 'INPUT' || 
+            element.closest('.command-badge-overlay') ||
+            (!element.isContentEditable && element.tagName !== 'TEXTAREA')) {
             return false;
         }
 
-        if (element.closest('.command-badge-overlay')) {
-            return false;
-        }
-
-        if (element.tagName === 'TEXTAREA' || element.isContentEditable) {
+        if ((element.tagName === 'TEXTAREA' || element.isContentEditable)) {
             const rect = element.getBoundingClientRect();
-            if (rect.width > 50 && rect.height > 20) {
-                return true;
-            }
+            return (rect.width > 50 && rect.height > 20);
         }
-
+    
         return false;
     }
     

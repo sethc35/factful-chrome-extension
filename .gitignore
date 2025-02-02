@@ -14,6 +14,7 @@ dist/*
 !dist/manifest.json
 !dist/widget.css
 !dist/widget.html
+!dist/widget.js
 !dist/vite.svg
 !dist/auth.html
 !dist/auth.js
