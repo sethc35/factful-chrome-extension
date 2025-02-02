@@ -13,7 +13,8 @@ export class Pill {
         this.initializeObservers();
 
         document.addEventListener("focusin", (event) => {
-            if (this.isTextInput(event.target)) {
+            if (this.shouldShowPill(event.target)) {
+                console.log('pill showing')
                 this.showAtElement(event.target);
             }
         });
@@ -250,6 +251,25 @@ export class Pill {
     
         authBtn.addEventListener("click", this.handleAuthClick.bind(this));
         return authBtn;
+    }
+
+    shouldShowPill(element) {
+        if (element.tagName === 'INPUT') {
+            return false;
+        }
+
+        if (element.closest('.command-badge-overlay')) {
+            return false;
+        }
+
+        if (element.tagName === 'TEXTAREA' || element.isContentEditable) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 50 && rect.height > 20) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     createAuthSvg() {

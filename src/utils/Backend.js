@@ -372,7 +372,10 @@ function validateAccessToken(tabId) {
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", error: "Failed to verify access token" });
             } else {
                 console.log('[Authenticator] Response received from API: ', data.data);
-
+                const userId = data.data.user.id;
+                chrome.storage.local.set({ user_id: userId }, function() {
+                    console.log('User ID saved:', userId);
+                });
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", session: data.data, accessToken: accessToken });
             }
         } else {
