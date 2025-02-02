@@ -35,7 +35,7 @@ Backend.sendCommand = async function(command, parameter) {
     if (!accessToken) {
         return;
     }
-    
+
     try {
         const query = encodeURIComponent(parameter);
         let endpoint;
@@ -217,9 +217,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.action === "initiateAuthentication") {
         initiateAuthentication();
-        // handleAuthentication();
 
-        sendResponse({ message: '[Authenticator] User authentication initiated' });
+        sendResponse({ message: 'User authentication initiated' });
 
         return true;
     }
@@ -331,15 +330,20 @@ function validateAccessTokenForGoogleDocs(tabId) {
                 chrome.storage.local.remove("access_token");
 
                 relayData({ error: "Failed to verify access token" }, tabId);
+                chrome.action.setPopup({ popup: "login_widget.html" });
+
             } else {
                 console.log('[Authenticator] Response received from API: ', data.data);
 
                 relayData({ session: data.data, accessToken: accessToken }, tabId);
+                chrome.action.setPopup({ popup: "widget.html" });
             }
         } else {
             console.log('[Authenticator] No access token found.');
                 
             relayData({ error: "Access token does not exist" }, tabId);
+            chrome.action.setPopup({ popup: "login_widget.html" });
+
         }
     });
 }
@@ -473,7 +477,6 @@ async function handleAuthentication() {
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
-
         chrome.tabs.create({
             url: 'https://factful.io/extension'
         });
@@ -484,7 +487,5 @@ chrome.runtime.onInstalled.addListener((details) => {
             width: 450,
             height: 400
         });
-       
-        
     }
 });
