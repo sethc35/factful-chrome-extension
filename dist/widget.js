@@ -35,9 +35,26 @@ function getDomainFromUrl(url) {
     return urlObj.hostname;
 }
 
-function updatePowerStatus(isEnabled) {
+async function getDocsEnabledState(tabId) {
+    try {
+        const result = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: () => localStorage.getItem('canFactfulRun')
+        });
+        return result[0].result !== 'false';
+    } catch (error) {
+        console.error('Failed to get docs state:', error);
+        return true;
+    }
+}
+
+async function updatePowerStatus(isEnabled, currentDomain, tabId) {
     const powerButtons = document.querySelectorAll('.status, .power-button');
     const statusTexts = document.querySelectorAll('.status div:last-child, .power-status-text');
+    
+    if (currentDomain === 'docs.google.com') {
+        isEnabled = await getDocsEnabledState(tabId);
+    }
     
     powerButtons.forEach(button => {
         if (isEnabled) {
@@ -52,7 +69,7 @@ function updatePowerStatus(isEnabled) {
     });
 }
 
-function applySettings(settings, currentDomain) {
+async function applySettings(settings, currentDomain, tabId) {
     const languageSelect = document.querySelector('.language-select');
     if (languageSelect) {
         languageSelect.value = settings.language;
@@ -68,12 +85,16 @@ function applySettings(settings, currentDomain) {
     });
 
     const isEnabled = !settings.disabledDomains.includes(currentDomain);
-    updatePowerStatus(isEnabled);
+    await updatePowerStatus(isEnabled, currentDomain, tabId);
 }
 
 async function togglePower(currentDomain, currentTab) {
     const currentSettings = await loadSettings();
-    const isCurrentlyEnabled = !currentSettings.disabledDomains.includes(currentDomain);
+    let isCurrentlyEnabled = !currentSettings.disabledDomains.includes(currentDomain);
+    
+    if (currentDomain === 'docs.google.com') {
+        isCurrentlyEnabled = await getDocsEnabledState(currentTab.id);
+    }
     
     let newDisabledDomains;
     if (isCurrentlyEnabled) {
@@ -87,8 +108,6 @@ async function togglePower(currentDomain, currentTab) {
         disabledDomains: newDisabledDomains
     });
     
-    updatePowerStatus(!isCurrentlyEnabled);
-
     if (currentDomain === 'docs.google.com') {
         try {
             await chrome.scripting.executeScript({
@@ -103,6 +122,7 @@ async function togglePower(currentDomain, currentTab) {
         }
     }
     
+    await updatePowerStatus(!isCurrentlyEnabled, currentDomain, currentTab.id);
     chrome.tabs.reload(currentTab.id);
 }
 
@@ -115,10 +135,10 @@ async function initializePowerButtons(currentDomain, currentTab) {
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync' && changes.disabledDomains) {
-        getCurrentTab().then(tab => {
+        getCurrentTab().then(async tab => {
             const domain = getDomainFromUrl(tab.url);
             const isEnabled = !changes.disabledDomains.newValue.includes(domain);
-            updatePowerStatus(isEnabled);
+            await updatePowerStatus(isEnabled, domain, tab.id);
         });
     }
 });
@@ -130,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentDomain = getDomainFromUrl(currentTab.url);
     const settings = await loadSettings();
     
-    applySettings(settings, currentDomain);
+    await applySettings(settings, currentDomain, currentTab.id);
     await initializePowerButtons(currentDomain, currentTab);
 
     const outputButtons = document.querySelectorAll('.output-type .option-button');

@@ -2,16 +2,6 @@
 
 var Backend = Backend || {};
 
-async function returnSettings() {
-    const settings = await chrome.storage.sync.get({
-        disabledDomains: [],
-        outputType: 'detailed',
-        language: 'en-US'
-    });
-
-    return settings;
-}
-
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
@@ -428,6 +418,16 @@ function initiateAuthentication() {
     const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
 
     chrome.tabs.create({ url: `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}` });
+}
+
+async function returnSettings() {
+    const settings = await chrome.storage.sync.get({
+        disabledDomains: [],
+        outputType: 'detailed',
+        language: 'en-US'
+    });
+
+    return settings;
 }
 
 async function handleAuthentication() {
