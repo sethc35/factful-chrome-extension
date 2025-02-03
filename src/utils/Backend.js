@@ -5,7 +5,8 @@ var Backend = Backend || {};
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
-        const response = await fetch(`https://backend.factful.io/process_text?input=${query}`, {
+        const settings = returnSettings();
+        const response = await fetch(`https://backend.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -30,8 +31,9 @@ Backend.fetchData = async function(textInput) {
     }
 }
 
-Backend.sendCommand = async function(command, parameter) {
+Backend.sendCommand = async function(command, parameter, useSearch = false) {
     const accessToken = getAccessToken();
+    const settings = returnSettings();
     if (!accessToken) {
         return;
     }
@@ -51,7 +53,7 @@ Backend.sendCommand = async function(command, parameter) {
                 endpoint = 'get-ant';
                 break;
             case '/search':
-                endpoint = 'quick_search';
+                endpoint = 'smart-search';
                 isSearch = true;
                 isGenerate = false;
                 break;
@@ -68,8 +70,7 @@ Backend.sendCommand = async function(command, parameter) {
         if (isSearch) {
             url = `https://backend.factful.io/${endpoint}/${query}`;
         } else if (isGenerate) {
-            console.log('generate exception hit')
-            url = `https://backend.factful.io/${endpoint}?prompt=${query}`;
+            url = `https://backend.factful.io/${endpoint}?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`;
         } else {
             url = `https://backend.factful.io/${endpoint}?word=${query}`;
         }
@@ -106,9 +107,10 @@ Backend.sendCommand = async function(command, parameter) {
     }
 }
 
-Backend.sendButton = async function(command, input, language) {
+Backend.sendButton = async function(command, input, language, useSearch = false) {
     try {
         const query = encodeURIComponent(input);
+        const settings = returnSettings();
         let endpoint;
         let isSearch = false;
         let isTranslate = false;
@@ -138,7 +140,7 @@ Backend.sendButton = async function(command, input, language) {
             ? `https://backend.factful.io/translate?text=${query}&language=${language}`
             : isSearch
                 ? `https://backend.factful.io/${endpoint}?query=${query}`
-                : `https://backend.factful.io/${endpoint}?text=${query}`
+                : `https://backend.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
     
         console.log('url of sendbutton: ', url);
 
@@ -170,10 +172,13 @@ Backend.sendButton = async function(command, input, language) {
     }
 }
 
-Backend.fetchHtml = async function(textInput) {
+Backend.fetchHtml = async function(textInput, useSearch = false) {
     try {
         const query = encodeURIComponent(textInput);
-        const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}`, {
+        const settings = returnSettings();
+        console.log('query for html: ', query)
+        console.log('use search ?? ', useSearch)
+        const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -264,7 +269,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const messageData = message.data;
                 console.log('Received data for HTML generation:', messageData);
                 
-                const data = await Backend.fetchHtml(messageData);
+                const data = await Backend.fetchHtml(messageData.data, messageData.useSearch);
                 console.log('HTML generation response:', data);
                 sendResponse(data);
             } catch (error) {
@@ -316,20 +321,23 @@ function injectRelayScript(tabId) {
             target: { tabId: tabId },
             func: () => {
                 if (window.__factful_relay_injected__) return;
-
                 window.__factful_relay_injected__ = true;
 
                 window.addEventListener('message', (event) => {
                     if (event.data.action === 'initiateFactfulAuthentication') {
                         console.log('[Authenticator] Authentication initiation request received.');
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
+
                     } else if (event.data.action === 'generateHtml') {
                         console.log('[Authenticator] Fetch HTML initiation request received.');
-                        console.log('Message data:', event.data.data);
-                        
+                        console.log("Relaying generateHtml request with useSearch:", event.data.useSearch);
+
+                        const { data, useSearch } = event.data;
+
                         chrome.runtime.sendMessage(chrome.runtime.id, {
                             action: 'fetchHtml',
-                            data: event.data.data
+                            data: event.data,
+                            useSearch: event.data.useSearch
                         }, response => {
                             window.postMessage({
                                 action: 'htmlResponse',
@@ -338,13 +346,12 @@ function injectRelayScript(tabId) {
                         });
                     }
                 });
-                    
+
                 function relayData(data) {
                     window.postMessage({ action: 'setFactfulAccessToken', payload: data }, '*');
                 }
-                    
-                window.relayData = relayData;
 
+                window.relayData = relayData;
                 console.log('[Authenticator] Relay script successfully injected.');
             }
         }, () => {
@@ -482,7 +489,7 @@ async function returnSettings() {
     const settings = await chrome.storage.sync.get({
         disabledDomains: [],
         outputType: 'detailed',
-        language: 'en-US'
+        language: 'US&English'
     });
 
     return settings;
@@ -557,7 +564,7 @@ async function handleAuthentication() {
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
         chrome.tabs.create({
-            url: 'https://app.factful.io/extension'
+            url: 'https://factful.io/extension'
         });
        
         chrome.windows.create({

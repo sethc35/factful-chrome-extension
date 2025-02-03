@@ -554,25 +554,43 @@
                 chatInput.className = 'chat-input';
                 chatInput.placeholder = 'This is a report generator. Type what you want to generate!';
 
+                const searchBadge = document.createElement('button');
+                searchBadge.className = 'search-badge';
+                searchBadge.textContent = 'Search';
+                searchBadge.dataset.enabled = 'false';
+
+                searchBadge.addEventListener('click', () => {
+                    const isEnabled = searchBadge.dataset.enabled === 'true';
+                    searchBadge.dataset.enabled = isEnabled ? 'false' : 'true';
+                    
+                    if (searchBadge.dataset.enabled === 'true') {
+                        searchBadge.classList.add('enabled');
+                    } else {
+                        searchBadge.classList.remove('enabled');
+                    }
+                });                
+
                 const sendButton = document.createElement('button');
                 sendButton.className = 'send-button';
 
-                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                svg.setAttribute('width', '24');
-                svg.setAttribute('height', '24');
-                svg.setAttribute('viewBox', '0 0 24 24');
-                svg.setAttribute('fill', 'none');
-                svg.setAttribute('stroke', 'currentColor');
-                svg.setAttribute('stroke-width', '2');
+                const sendIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                sendIcon.setAttribute("width", "24");
+                sendIcon.setAttribute("height", "24");
+                sendIcon.setAttribute("viewBox", "0 0 24 24");
+                sendIcon.setAttribute("fill", "none");
+                sendIcon.setAttribute("stroke", "currentColor");
+                sendIcon.setAttribute("stroke-width", "2");
 
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                path.setAttribute('d', 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z');
+                const sendPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                sendPath.setAttribute("d", "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z");
 
-                svg.appendChild(path);
-                sendButton.appendChild(svg);
+                sendIcon.appendChild(sendPath);
+                sendButton.appendChild(sendIcon);
 
                 inputContainer.appendChild(chatInput);
+                inputContainer.appendChild(searchBadge);
                 inputContainer.appendChild(sendButton);
+
                 chatContainer.appendChild(messagesContainer);
                 chatContainer.appendChild(inputContainer);
                 composeContent.appendChild(chatContainer);
@@ -1191,6 +1209,31 @@
                     50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
                     100% { stroke-dasharray: 90, 150; stroke-dashoffset: -125; }
                 }
+                .search-badge {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 80px; /* Adjust width to fit the "Search" text */
+                    height: 40px; /* Same height as send button */
+                    border: none;
+                    border-radius: 8px;
+                    background-color: #ddd; /* Default background */
+                    color: black;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: background-color 0.3s ease, color 0.3s ease;
+                }
+
+                .search-badge.enabled {
+                    background-color: #0177FC;
+                    color: white;
+                }
+
+                .search-badge:hover {
+                    background-color: #0056b3;
+                    color: white;
+                }
                 `;
                 sidebarContainer.appendChild(styles);
         
@@ -1277,13 +1320,16 @@
     async handleMessage(message) {
         const messagesContainer = document.querySelector('.messages-container');
         const sendButton = document.querySelector('.send-button');
+        const searchBadge = document.querySelector('.search-badge');
     
         if (!sendButton || !messagesContainer) return;
+
+        const useSearch = searchBadge.dataset.enabled === 'true';
 
         sendButton.disabled = true;
         sendButton.style.backgroundColor = "#a0a0a0";
         sendButton.replaceChildren();
-
+    
         const spinner = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         spinner.setAttribute("class", "spinner");
         spinner.setAttribute("width", "20");
@@ -1302,14 +1348,14 @@
     
         spinner.appendChild(circle);
         sendButton.appendChild(spinner);
-    
+
         const userMessage = document.createElement('div');
         userMessage.classList.add('message', 'user');
         userMessage.textContent = message;
         messagesContainer.appendChild(userMessage);
     
         try {
-            await this.makeApiCall(message);
+            await this.makeApiCall(message, useSearch);
         } catch (error) {
             console.error('Error:', error);
     
@@ -1322,7 +1368,7 @@
         sendButton.disabled = false;
         sendButton.style.backgroundColor = "#0177FC";
         sendButton.replaceChildren();
-
+    
         const sendIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         sendIcon.setAttribute("width", "24");
         sendIcon.setAttribute("height", "24");
@@ -1340,11 +1386,13 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }    
 
-    async makeApiCall(message) {
+    async makeApiCall(message, useSearch) {
         try {
+            console.log("Sending message to backend with useSearch:", useSearch);
             window.postMessage({
                 action: 'generateHtml',
                 data: message,
+                useSearch: useSearch
             }, '*');
     
             return new Promise((resolve, reject) => {
