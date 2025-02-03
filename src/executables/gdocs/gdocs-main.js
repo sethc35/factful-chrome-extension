@@ -84,7 +84,7 @@ export function initializeGDocsTracker() {
   }
 
   async function runMainScript() {
-    console.log("[Enhanced Text Tracker] Initializing...");
+    
 
     const [
       { SlashCommand },
@@ -126,7 +126,7 @@ export function initializeGDocsTracker() {
           );
 
           if (!matchingUnderline) {
-            console.error('No matching underline found for correction');
+            
             return;
           }
 
@@ -174,7 +174,7 @@ export function initializeGDocsTracker() {
           }));
 
         } catch (error) {
-          console.error('Error in handleCorrection:', error);
+          
           throw error;
         }
       },
@@ -225,12 +225,12 @@ export function initializeGDocsTracker() {
           accessToken = null;
           singlePill.changeAuthenticationState(false);
           
-          console.log('[Authenticator] Error setting access token:', event.data.payload.error)
+          
         } else {
           accessToken = event.data.payload.accessToken;
           singlePill.changeAuthenticationState(true);
 
-          console.log('[Authenticator] Successfully received the access token:', event.data.payload);
+          
         }
       }
     });
@@ -238,7 +238,7 @@ export function initializeGDocsTracker() {
     setupSlashListeners();
     observeDocChanges();
 
-    console.log("[Enhanced Text Tracker] gdocs-main.js init complete.");
+    
 
     function setupSlashListeners() {
       attachListeners(document);
@@ -298,7 +298,7 @@ export function initializeGDocsTracker() {
       let previousCorrections = new Set();
       const debouncedApiUpdate = debounce(async () => {
         if (!accessToken) {
-          console.log("[Enhanced Text Tracker] User is not authenticated.");
+          
 
           return;
         }
@@ -307,7 +307,7 @@ export function initializeGDocsTracker() {
         const newApiData = await ApiService.fetchDataFromApi(accessToken);
 
         if (newApiData.error) {
-          console.log("[Enhanced Text Tracker] Error fetching data", newApiData.error);
+          
 
           if (newApiData.error === "Unauthorized") {
             accessToken = null;

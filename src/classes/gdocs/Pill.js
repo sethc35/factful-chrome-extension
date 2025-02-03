@@ -16,7 +16,7 @@
     changeAuthenticationState(isAuthenticated) {
         this.isAuthenticated = isAuthenticated;
 
-        console.log("[Pill] Changing authentication state to: ", isAuthenticated);
+        
 
         if (isAuthenticated) {
             this.tooltip.style.opacity = "0";
@@ -176,7 +176,7 @@
     calculateOffset() {
         const page = document.querySelector('.kix-page-paginated');
         if (!page) {
-            console.log('No page element found');
+            
             return;
         }
 
@@ -188,7 +188,7 @@
         this.pillContainer.style.left = `${offsetLeft}px`;
         this.pillContainer.style.top = `${offsetTop}px`;
 
-        console.log('Pill positioning:', {
+        
             pageRect,
             offsetLeft,
             offsetTop,
@@ -239,7 +239,7 @@
                     container.remove();
                 }, 100);
             } catch (error) {
-                console.error('Error during correction acceptance:', error);
+                
             }
         });
 
@@ -336,7 +336,7 @@
 
         localStorage.setItem('canFactfulRun', JSON.stringify(!enabled));
         
-        console.log(`Set canFactfulRun to ${!enabled}`);
+        
         window.location.reload();
     }
 
@@ -389,7 +389,7 @@
     }
 
     handleAuthClick() {
-        console.log("[Authenticator] Initiating user authentication...");
+        
         window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
     }
 
@@ -1304,7 +1304,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            console.error("Chat container not found");
+            
             return;
         }
 
@@ -1357,7 +1357,7 @@
         try {
             await this.makeApiCall(message, useSearch);
         } catch (error) {
-            console.error('Error:', error);
+            
     
             const errorMessage = document.createElement('div');
             errorMessage.classList.add('message', 'bot');
@@ -1388,7 +1388,7 @@
 
     async makeApiCall(message, useSearch) {
         try {
-            console.log("Sending message to backend with useSearch:", useSearch);
+            
             window.postMessage({
                 action: 'generateHtml',
                 data: message,
@@ -1414,7 +1414,7 @@
                 window.addEventListener('message', handleResponse);
             });
         } catch (error) {
-            console.error('API call error:', error);
+            
             throw error;
         }
     }    
@@ -1423,7 +1423,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            console.error("Chat container not found");
+            
             return;
         }
 
@@ -1464,7 +1464,7 @@
                     copyButton.style.color = '';
                 }, 2000);
             } catch (err) {
-                console.error('Copy failed:', err);
+                
                 copyButton.textContent = 'Copy failed!';
                 copyButton.style.backgroundColor = 'red';
                 copyButton.style.color = 'white';

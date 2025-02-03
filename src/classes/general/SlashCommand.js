@@ -715,11 +715,11 @@ export class SlashCommand {
                 return this.createPopdown(response.antonyms, targetElement);
             }
             if (command === '/search' && response.final_result?.length) {
-                console.log('response from search ', response);
+                
                 return this.createPopdown(response.final_result, targetElement);
             }
             if (command === '/generate' && response.generated_text?.length) {
-                console.log(response);
+                
                 return this.createPopdown(response.generated_text, targetElement);
             }
             return null;
@@ -826,7 +826,7 @@ export class SlashCommand {
             
                         element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                     } catch (error) {
-                        console.error('Insertion error:', error);
+                        
                     }
             
                     setTimeout(() => {

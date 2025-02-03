@@ -22,11 +22,11 @@ Backend.fetchData = async function(textInput) {
                 }
 
         const data = await response.json();
-        console.log("Backend fetchData received data:", data);
+        
         return data || {};
 
     } catch (error) {
-        console.log("fetchData() Error: " + error);
+        
         return { error: error.message };
     }
 }
@@ -43,8 +43,8 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
         let endpoint;
         let isSearch = false;
         let isGenerate = false;
-        console.log('query + command: ', query, command);
-        console.log('context reference? ', context);
+        
+        
         
         switch (command) {
             case '/synonym':
@@ -76,7 +76,7 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
             url = `https://backend.factful.io/${endpoint}?word=${query}`;
         }
 
-        console.log('url hitting: ', url);
+        
 
         const response = await fetch(url, {
             method: 'GET',
@@ -85,14 +85,14 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
             }
         });
 
-        console.log(response, url);
+        
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log(`Backend ${command} received data:`, data);
+        
 
         if (isSearch && data.output) {
             return {
@@ -103,7 +103,7 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
         return data || {};
 
     } catch (error) {
-        console.log(`sendCommand() Error: ${error}`);
+        
         return { error: error.message };
     }
 }
@@ -143,7 +143,7 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
                 ? `https://backend.factful.io/${endpoint}?query=${query}`
                 : `https://backend.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
     
-        console.log('url of sendbutton: ', url);
+        
 
         const response = await fetch(url, {
             method: 'GET',
@@ -157,7 +157,7 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
         }
 
         const data = await response.json();
-        console.log(`Backend ${command} received data:`, data);
+        
 
         if (isSearch && data.output) {
             return {
@@ -168,7 +168,7 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
         return data || {};
 
     } catch (error) {
-        console.log(`sendCommand() Error: ${error}`);
+        
         return { error: error.message };
     }
 }
@@ -177,8 +177,8 @@ Backend.fetchHtml = async function(textInput, useSearch = false) {
     try {
         const query = encodeURIComponent(textInput);
         const settings = returnSettings();
-        console.log('query for html: ', query)
-        console.log('use search ?? ', useSearch)
+        
+        
         const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`, {
             method: 'GET',
             headers: {
@@ -195,11 +195,11 @@ Backend.fetchHtml = async function(textInput, useSearch = false) {
                 }
 
         const data = await response.json();
-        console.log("Backend fetchData received data:", data);
+        
         return data || {};
 
     } catch (error) {
-        console.log("fetchData() Error: " + error);
+        
         return { error: error.message };
     }
 }
@@ -211,7 +211,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const data = await Backend.fetchData(message.textInput);
                 sendResponse(data);
             } catch (error) {
-                console.log('Error fetching data: ', error);
+                
                 sendResponse({ error: 'Failed to fetch data' });
             }
         })();
@@ -224,7 +224,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 const data = await Backend.sendCommand(message.command, message.parameter);
                 sendResponse(data);
             } catch (error) {
-                console.log('Error processing command: ', error);
+                
                 sendResponse({ error: 'Failed to process command' });
             }
         })();
@@ -234,7 +234,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "sendButton") {
         (async () => {
             try {
-                console.log('params: ', message);
+                
                 const data = await Backend.sendButton(
                     message.command, 
                     message.input || message.parameter,
@@ -242,7 +242,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 );
                 sendResponse(data);
             } catch (error) {
-                console.log('Error processing command: ', error);
+                
                 sendResponse({ error: 'Failed to process command' });
             }
         })();
@@ -268,13 +268,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         (async () => {
             try {
                 const messageData = message.data;
-                console.log('Received data for HTML generation:', messageData);
+                
                 
                 const data = await Backend.fetchHtml(messageData.data, messageData.useSearch);
-                console.log('HTML generation response:', data);
+                
                 sendResponse(data);
             } catch (error) {
-                console.error('Error fetching HTML:', error);
+                
                 sendResponse({ error: 'Failed to fetch HTML' });
             }
         })();
@@ -286,7 +286,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete') {
         isGoogleDocsTab(tabId, async (isGoogleDocs) => {
             if (isGoogleDocs) {
-                console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+                
 
                 await injectRelayScript(tabId)
                 validateAccessTokenForGoogleDocs(tabId);
@@ -300,7 +300,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener(({ tabId }) => {
     isGoogleDocsTab(tabId, async (isGoogleDocs) => {
         if (isGoogleDocs) {
-            console.log(`[Authenticator] Relay script injected into tab ${tabId}.`);
+            
 
             await injectRelayScript(tabId)
             validateAccessTokenForGoogleDocs(tabId);
@@ -312,7 +312,7 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.access_token && changes.access_token.newValue) {
-        console.log("[Authenticator] Access token updated:", changes.access_token.newValue);
+        
     }
 });
 
@@ -326,12 +326,12 @@ function injectRelayScript(tabId) {
 
                 window.addEventListener('message', (event) => {
                     if (event.data.action === 'initiateFactfulAuthentication') {
-                        console.log('[Authenticator] Authentication initiation request received.');
+                        
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
 
                     } else if (event.data.action === 'generateHtml') {
-                        console.log('[Authenticator] Fetch HTML initiation request received.');
-                        console.log("Relaying generateHtml request with useSearch:", event.data.useSearch);
+                        
+                        
 
                         const { data, useSearch } = event.data;
 
@@ -353,7 +353,7 @@ function injectRelayScript(tabId) {
                 }
 
                 window.relayData = relayData;
-                console.log('[Authenticator] Relay script successfully injected.');
+                
             }
         }, () => {
             if (chrome.runtime.lastError) {
@@ -372,7 +372,7 @@ function relayData(data, tabId) {
             if (window.relayData) {
                 window.relayData(data);
             } else {
-                console.error('[Authenticator] relayData is not defined.');
+                
             }
         },
         args: [data],
@@ -380,13 +380,13 @@ function relayData(data, tabId) {
 }
 
 function validateAccessTokenForGoogleDocs(tabId) {
-    console.log('[Authenticator] Retrieving access token...');
+    
         
     chrome.storage.local.get("access_token", async (data) => {
         const accessToken = data.access_token;
 
         if (accessToken) {
-            console.log(accessToken);
+            
             const response = await fetch(`https://backend.factful.io/verify_access_token`, {
                 method: "GET",
                 headers: {
@@ -397,7 +397,7 @@ function validateAccessTokenForGoogleDocs(tabId) {
             const data = await response.json();
 
             if (!response.ok) {
-                console.log('[Authenticator] Error verifying access token:', data.error, data.details);
+                
 
                 chrome.storage.local.remove("access_token");
 
@@ -405,13 +405,13 @@ function validateAccessTokenForGoogleDocs(tabId) {
                 chrome.action.setPopup({ popup: "login_widget.html" });
 
             } else {
-                console.log('[Authenticator] Response received from API: ', data.data);
+                
 
                 relayData({ session: data.data, accessToken: accessToken }, tabId);
                 chrome.action.setPopup({ popup: "widget.html" });
             }
         } else {
-            console.log('[Authenticator] No access token found.');
+            
                 
             relayData({ error: "Access token does not exist" }, tabId);
             chrome.action.setPopup({ popup: "login_widget.html" });
@@ -421,7 +421,7 @@ function validateAccessTokenForGoogleDocs(tabId) {
 }
 
 function validateAccessToken(tabId) {
-    console.log('[Authenticator] Retrieving access token...');
+    
         
     chrome.storage.local.get("access_token", async (data) => {
         const accessToken = data.access_token;
@@ -437,23 +437,23 @@ function validateAccessToken(tabId) {
             const data = await response.json();
 
             if (!response.ok) {
-                console.log('[Authenticator] Error verifying access token:', data.error, data.details);
+                
 
                 chrome.storage.local.remove("access_token");
 
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", error: "Failed to verify access token" });
                 chrome.action.setPopup({ popup: "login_widget.html" });
             } else {
-                console.log('[Authenticator] Response received from API: ', data.data);
+                
                 const userId = data.data.user.id;
                 chrome.storage.local.set({ user_id: userId }, function() {
-                    console.log('User ID saved:', userId);
+                    
                 });
                 chrome.tabs.sendMessage(tabId, { action: "setAccessToken", session: data.data, accessToken: accessToken });
                 chrome.action.setPopup({ popup: "widget.html" });
             }
         } else {
-            console.log('[Authenticator] No access token found.');
+            
                 
             chrome.tabs.sendMessage(tabId, { action: "setAccessToken", error: "Access token does not exist" });
         }
@@ -546,7 +546,7 @@ async function handleAuthentication() {
                         };
                     }
                 } catch (error) {
-                    console.error('Authentication error:', error);
+                    
                     chrome.tabs.onUpdated.removeListener(handleAuthComplete);
                     throw error;
                 }

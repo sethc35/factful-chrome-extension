@@ -989,7 +989,7 @@ export class ChatWindow {
   insertTextAtCursor(text) {
     const el = this.lastFocusedElement;
     if (!el) {
-        console.log('No focused element');
+        
         return;
     }
 
@@ -1051,10 +1051,10 @@ export class ChatWindow {
           }
       }
   
-      console.log('Selected text:', selectedText);
+      
   
       if (!selectedText) {
-          console.log('No text selected');
+          
           return;
       }
   
@@ -1063,7 +1063,7 @@ export class ChatWindow {
           command: "paraphrase",
           parameter: selectedText
       }, response => {
-        console.log('paraphrase get back: ', response);
+        
           if (response && response['paraphrased-text']) {
               this.showSuggestionSection(response['paraphrased-text']);
           } else {
@@ -1087,7 +1087,7 @@ export class ChatWindow {
         }
 
         if (!selectedText) {
-            console.log('No text selected');
+            
             return;
         }
 
@@ -1101,7 +1101,7 @@ export class ChatWindow {
               command: "summarize",
               parameter: selectedText
           }, response => {
-            console.log('get back from summarize: ', response);
+            
               if (response && response['summarized-text']) {
                   this.showSuggestionSection(response['summarized-text']);
               } else {
@@ -1127,17 +1127,17 @@ export class ChatWindow {
             }
         }
     
-        console.log('Selected text:', selectedText);
+        
     
         if (!selectedText) {
-            console.log('No text selected');
+            
             return;
         }
 
         const languageSelect = this.chatWindow.querySelector('.translate-row select');
         const targetLanguage = languageSelect.value;
         
-        console.log('Target language:', targetLanguage);
+        
     
         chrome.runtime.sendMessage({
             action: "sendButton",
@@ -1145,7 +1145,7 @@ export class ChatWindow {
             parameter: selectedText,
             language: targetLanguage
         }, response => {
-            console.log('Translation response:', response);
+            
             if (response && response['translated-text']) {
                 this.showSuggestionSection(response['translated-text']);
             } else {
@@ -1183,7 +1183,7 @@ export class ChatWindow {
                 command: "search",
                 parameter: searchQuery
             }, response => {
-                console.log('search query response:', response);
+                
                 if (response && response.final_result) {
                     const searchResultsContainer = document.createElement('div');
                     searchResultsContainer.style.padding = '16px';
@@ -1284,7 +1284,7 @@ export class ChatWindow {
 
   replaceHighlightedText(replacementText) {
     const el = this.lastFocusedElement;
-    console.log('last focused element: ', el);
+    
     if (!el) return;
   
     if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
@@ -1517,7 +1517,7 @@ initializeCompose() {
                 composeButton.textContent = 'Generate';
             });
         } catch (error) {
-            console.error('Error:', error);
+            
             alert('Error generating text');
             composeButton.disabled = false;
             composeButton.textContent = 'Generate';

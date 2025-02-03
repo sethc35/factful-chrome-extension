@@ -14,7 +14,7 @@ export class Pill {
 
         document.addEventListener("focusin", (event) => {
             if (this.shouldShowPill(event.target)) {
-                console.log('pill showing');
+                
                 this.showAtElement(event.target);
             } else {
                 this.hide();
@@ -112,7 +112,7 @@ export class Pill {
     changeAuthenticationState(isAuthenticated) {
         this.isAuthenticated = isAuthenticated;
     
-        console.log("[Pill] Changing authentication state to: ", isAuthenticated);
+        
     
         if (isAuthenticated) {
             this.tooltip.style.opacity = "0";
@@ -319,10 +319,10 @@ export class Pill {
     }
     
     handleAuthClick() {
-        console.log("[Authenticator] Initiating user authentication...");
+        
     
         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' }, (response) => {
-            console.log("[Authenticator] Authentication response: ", response.message);
+            
         });
     }
 

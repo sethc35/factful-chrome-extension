@@ -30,7 +30,7 @@ export class ApiService {
         fullText += lineText
       })
     })
-    console.log('[Enhanced Text Tracker] Full text: ', fullText);
+    
     return fullText.trim()
   }
 
@@ -54,7 +54,7 @@ export class ApiService {
       }
       
       const textContent = await ApiService.collectTextFromRects()
-      console.log('[APIService] Processing text...')
+      
       const query = encodeURIComponent(textContent)
       const response = await fetch(
         `https://backend.factful.io/process_text?input=${query}`,
@@ -75,7 +75,7 @@ export class ApiService {
       }
       const data = await response.json()
 
-      console.log('[APIService] API response: ', data);
+      
 
       return data || {}
     } catch (error) {
@@ -86,7 +86,7 @@ export class ApiService {
   static findCorrectionsInDocument(apiData, documentText) {
     const corrections = []
     if (apiData?.error) {
-      console.log("[APIService] Error fetching data from API:", apiData.error)
+      
 
       return corrections
     } else if (!apiData?.corrections?.length) {

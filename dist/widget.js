@@ -1,5 +1,5 @@
 function debug(message) {
-    console.log(message);
+    
     const debugDiv = document.getElementById('debugOutput');
 }
 
@@ -43,7 +43,7 @@ async function getDocsEnabledState(tabId) {
         });
         return result[0].result !== 'false';
     } catch (error) {
-        console.error('Failed to get docs state:', error);
+        
         return true;
     }
 }
@@ -118,7 +118,7 @@ async function togglePower(currentDomain, currentTab) {
                 args: [!isCurrentlyEnabled]
             });
         } catch (err) {
-            console.error('Failed to set localStorage:', err);
+            
         }
     }
     

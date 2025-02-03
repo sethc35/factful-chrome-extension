@@ -26,11 +26,11 @@ async function initializeExtension() {
   const currentUrl = window.location.href;
   const baseUrl = new URL(currentUrl).hostname;
 
-  console.log('[Initialize] Current domain:', baseUrl);
-  console.log('[Initialize] Disabled domains:', disabledDomains);
+  
+  
 
   if (disabledDomains.includes(baseUrl)) {
-      console.log('[Initialize] Extension is disabled for this domain');
+      
       return;
   }
 
@@ -41,11 +41,11 @@ async function initializeExtension() {
       if (request.error) {
         pill.changeAuthenticationState(false)
 
-        console.log('[Authenticator] Error setting access token:', request.error)
+        
       } else {
         pill.changeAuthenticationState(true)
 
-        console.log('[Authenticator] Successfully received the access token', request)
+        
       }
 
       sendResponse({ success: true });
@@ -71,12 +71,12 @@ async function initializeExtension() {
       textInput: text
     }).then(response => {
       if (response.error) {
-        console.log('[APIService] Error fetching data:', response.error);
+        
 
         return;
       }
 
-      console.log('[APIService] API response: ', response);
+      
 
       return response
     }).catch(() => null)
@@ -448,7 +448,7 @@ async function initializeExtension() {
           }, 500)
         }
       } catch (error) {
-        console.log('error clicking tooltip: ', error)
+        
       }
     }
   })

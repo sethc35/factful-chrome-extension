@@ -7,7 +7,6 @@ const tokenType = hashParams.get("token_type");
 
 if (accessToken && expiresAt && refreshToken && tokenType) {
     chrome.storage.local.set({ access_token: accessToken, expires_at: expiresAt, refresh_token: refreshToken }, () => {
-        console.log("[Authenticator] Access token saved in storage.");
 
         document.getElementById("auth-message").innerText = "Authentication successful! This tab will close in 3 seconds.";
 
