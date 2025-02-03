@@ -135,7 +135,7 @@ export class Tooltip {
           this.currentHoveredElement = null
         }, 500)
       } catch (error) {
-        
+        console.error("Error during tooltip click handler:", error)
       }
     })
   }

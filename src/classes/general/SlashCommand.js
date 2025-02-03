@@ -826,7 +826,7 @@ export class SlashCommand {
             
                         element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                     } catch (error) {
-                        
+                        console.error('Insertion error:', error);
                     }
             
                     setTimeout(() => {

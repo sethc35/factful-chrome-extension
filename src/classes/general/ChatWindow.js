@@ -1517,7 +1517,7 @@ initializeCompose() {
                 composeButton.textContent = 'Generate';
             });
         } catch (error) {
-            
+            console.error('Error:', error);
             alert('Error generating text');
             composeButton.disabled = false;
             composeButton.textContent = 'Generate';

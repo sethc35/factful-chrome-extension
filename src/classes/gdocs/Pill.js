@@ -16,8 +16,6 @@
     changeAuthenticationState(isAuthenticated) {
         this.isAuthenticated = isAuthenticated;
 
-        
-
         if (isAuthenticated) {
             this.tooltip.style.opacity = "0";
             this.tooltip.style.display = "none";
@@ -176,7 +174,6 @@
     calculateOffset() {
         const page = document.querySelector('.kix-page-paginated');
         if (!page) {
-            
             return;
         }
 
@@ -187,13 +184,6 @@
 
         this.pillContainer.style.left = `${offsetLeft}px`;
         this.pillContainer.style.top = `${offsetTop}px`;
-
-        
-            pageRect,
-            offsetLeft,
-            offsetTop,
-            pillElement: this.pillContainer.getBoundingClientRect()
-        });
     }
 
     createCorrectionElement(correction) {
@@ -239,7 +229,7 @@
                     container.remove();
                 }, 100);
             } catch (error) {
-                
+                console.error('Error during correction acceptance:', error);
             }
         });
 
@@ -335,8 +325,7 @@
         }
 
         localStorage.setItem('canFactfulRun', JSON.stringify(!enabled));
-        
-        
+
         window.location.reload();
     }
 
@@ -389,7 +378,6 @@
     }
 
     handleAuthClick() {
-        
         window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
     }
 
@@ -1304,7 +1292,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            
+            console.error("Chat container not found");
             return;
         }
 
@@ -1357,7 +1345,7 @@
         try {
             await this.makeApiCall(message, useSearch);
         } catch (error) {
-            
+            console.error('Error:', error);
     
             const errorMessage = document.createElement('div');
             errorMessage.classList.add('message', 'bot');
@@ -1388,7 +1376,6 @@
 
     async makeApiCall(message, useSearch) {
         try {
-            
             window.postMessage({
                 action: 'generateHtml',
                 data: message,
@@ -1414,7 +1401,7 @@
                 window.addEventListener('message', handleResponse);
             });
         } catch (error) {
-            
+            console.error('API call error:', error);
             throw error;
         }
     }    
@@ -1423,7 +1410,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            
+            console.error("Chat container not found");
             return;
         }
 
@@ -1464,7 +1451,7 @@
                     copyButton.style.color = '';
                 }, 2000);
             } catch (err) {
-                
+                console.error('Copy failed:', err);
                 copyButton.textContent = 'Copy failed!';
                 copyButton.style.backgroundColor = 'red';
                 copyButton.style.color = 'white';
