@@ -322,3 +322,7 @@ input:checked + .slider-toggle:before {
 .status.disabled {
     opacity: 0.5;
 }
+
+.support {
+    text-align: center;
+}
