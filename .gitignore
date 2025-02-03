@@ -8,13 +8,20 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+dist/*
+!dist/login_widget.html
+!dist/login_widget.css
+!dist/login_widget.js
 !dist/manifest.json
 !dist/widget.css
 !dist/widget.html
+!dist/widget.js
 !dist/vite.svg
 !dist/auth.html
-!dist/assets
+!dist/auth.js
+!dist/welcome.html
+!dist/welcome.js
+!dist/welcome.css
 dist-ssr
 *.local
 

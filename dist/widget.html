@@ -10,10 +10,10 @@
 <body>
     <div class="widget-container">
         <div class="logo">
-            <img src="assets/factful-icon.png" alt="Factful Logo">
+            <img id="factful-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAMAAAC7IEhfAAAA1VBMVEVHcEwAgf8Ad/8Acf8Ai/8Ahv8Akv8Alv8Ae/8Aef8Ahv8Aff8Ag/8Aev8AdP8AeP8Ahv8Aef8Aiv8AdP8Ahv8AgP8AfP8Afv8Afv8Aev8Adf8Aj/8Aif8Afv8AgP8Ai/8AjP8Ak/8Ab/8Ah/8Aiv8Ahv8Abv8Aaf8AmP8AfP8AmP8AmP8AfP8AbP8AmP8Ahf8AmP8Ad/8Al/8Aiv8Agf8Af/8Agv8Ag/8Ajf8Afv8Ae/8Ahf8Ahv8Abf8AlP8Akf8Aif8AcP8Ac/8Adv8AfP8AkP8AeP/SsWoFAAAAMnRSTlMADkGafGJhfPeKFNfLAyBwJWLL9gZ86jZSxOKNH7dpOgpRL6rY6vDZx6bh9au6p/Vvp29LdPAAAAFRSURBVDjLndVnU8JAEAZgEhDTC6aSShUQuyhGxdD8/z/JCynn5G42jO/HzDOb3N3eptX6d/zQNM1Okcsi3ZhwTPDy+vbxmabP6/Xx+L3ZPGW5GRAwXNHgQqs7RaTCB6Ig/06DM6HubIsGyS+MlwcavDPq0OFocBHVneAmNOgRKzETGpz5+Qar7TKPrqqjXJTp5im2ULn+Qtlud7v9ngfPlsdQVCB4KpnDH7ikjqFlQ5C5rWAyNwAos9MKcg5UUm5XMHEFSA77FTyo4HrU6VUWDkWMmDIyCY0hW2ZpSVl6KF4MFTfxWY+h79X+XIUOuAG4e3pQQRZfhXQAHVKA+3EELUXHV2ESQY0k4g73ZKg18VUYa1DBPobgSWoYSmBvyNWr7x14NGrlYkZGwxBVczixm6at4J4g3zyXHQ5B0W+GxhzB8JxRb1urgDnrp2BKLPX5LyYlacUXvGFLAAAAAElFTkSuQmCC"></img>
             <div>
                 <span>Factful</span>
-                <small>for Chrome</small>
+                <small>for <span id="browser-name">Chrome</span></small>
             </div>
         </div>
 
@@ -26,28 +26,6 @@
             <button class="option-button" data-type="neutral">Neutral</button>
         </div>
 
-        <div class="slider-container">
-            <div class="section-title">Max Output Length</div>
-            <input type="range" class="slider" min="0" max="100" value="50">
-            <div class="slider-label">Up to 1000 chars</div>
-        </div>
-
-        <div class="toggle-container">
-            <span class="toggle-label">Allow Wikipedia For Nuanced Queries</span>
-            <label class="toggle-switch">
-                <input type="checkbox" checked>
-                <span class="slider-toggle"></span>
-            </label>
-        </div>
-
-        <div class="toggle-container">
-            <span class="toggle-label">Provide Correction Sources</span>
-            <label class="toggle-switch">
-                <input type="checkbox" checked>
-                <span class="slider-toggle"></span>
-            </label>
-        </div>
-
         <div class="language-container">
             <span class="section-title language-title">Language Locale</span>
             <select class="language-select">
@@ -57,29 +35,19 @@
                 </option>
                 <option value="en-CA">
                     Canadian English
-
-                    <!-- <img src="assets/canada.png" alt="Canada Flag" class="flag-icon">  -->
-                </option>
-                
-                    <!-- <img src="assets/usa.png" alt="USA Flag" class="flag-icon"> US English -->
                 </option>
                 <option value="en-GB">
                     British English
-                    <!-- <img src="assets/britain.png" alt="Britain Flag" class="flag-icon"> British English -->
                 </option>
             </select>
         </div>
-         
-        <!--
+        
         <div class="status">
             <div class="icon-bg">
                 <img src="assets/on.png" alt="ON Icon" class="on-icon" />
             </div>
-            <div>Factful is Enabled</div>
+            <div>Factful is enabled for this site</div>
         </div>
-        -->
-        
-        
         
         <div id="debugOutput"></div>
     </div>

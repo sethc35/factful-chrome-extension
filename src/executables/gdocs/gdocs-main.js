@@ -84,7 +84,7 @@ export function initializeGDocsTracker() {
   }
 
   async function runMainScript() {
-    console.log("[Enhanced Text Tracker] Initializing...");
+    
 
     const [
       { SlashCommand },
@@ -102,9 +102,8 @@ export function initializeGDocsTracker() {
 
     const underline = new Underline();
     const slashCommand = new SlashCommand();
-    let apiData = await ApiService.fetchDataFromApi();
-    let isSignedIn = false;
     let accessToken = null;
+    let apiData = await ApiService.fetchDataFromApi(accessToken);
     let corrections = [];
     {
       const docText = await ApiService.collectTextFromRects();
@@ -112,62 +111,6 @@ export function initializeGDocsTracker() {
       underline.buildRectCharIndexMapping();
       underline.applyUnderlines(corrections, true);
     }
-
-    const SUPABASE_URL = "https://ybxboifzbpuhrqbbcneb.supabase.co";
-    const redirectUrl = `chrome-extension://${chrome.runtime.id}/auth.html`;
-
-    async function initializeSupabaseAuth() {
-      const authForm = createAuthForm();
-      document.body.appendChild(authForm);
-
-      const form = authForm.querySelector('#auth-form');
-      const googleButton = authForm.querySelector('#google-signin');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = authForm.querySelector('#email').value;
-        const password = authForm.querySelector('#password').value;
-
-        window.postMessage({ 
-          action: 'signInWithPassword',
-          data: { email, password }
-        }, '*');
-      });
-
-      googleButton.addEventListener('click', () => {
-        window.postMessage({ 
-          action: 'signInWithGoogle',
-          data: { redirectUrl }
-        }, '*');
-      });
-
-      window.postMessage({ action: 'getSession' }, '*');
-    }
-
-    function checkUser() {
-      console.log("[Authenticator] Retrieving user session...");
-      if (!isSignedIn) {
-        initializeSupabaseAuth();
-      }
-    }
-
-    window.addEventListener('message', function(event) {
-      if (event.data.type === 'authStateChange') {
-        const { event: authEvent, session } = event.data;
-        if (authEvent === 'SIGNED_IN') {
-          isSignedIn = true;
-          accessToken = session.access_token;
-          const authForm = document.querySelector('.auth-container');
-          if (authForm) authForm.remove();
-        } else if (authEvent === 'SIGNED_OUT') {
-          isSignedIn = false;
-          accessToken = null;
-          checkUser();
-        }
-      }
-    });
-
-    checkUser();
 
     const singlePill = new Pill(corrections.length, corrections, {
       findTextDifferences: Underline.findTextDifferences,
@@ -183,7 +126,7 @@ export function initializeGDocsTracker() {
           );
 
           if (!matchingUnderline) {
-            console.error('No matching underline found for correction');
+            
             return;
           }
 
@@ -231,7 +174,7 @@ export function initializeGDocsTracker() {
           }));
 
         } catch (error) {
-          console.error('Error in handleCorrection:', error);
+          
           throw error;
         }
       },
@@ -276,10 +219,26 @@ export function initializeGDocsTracker() {
       }
     });
 
+    window.addEventListener('message', function(event) {
+      if (event.data.action && event.data.action === 'setFactfulAccessToken') {
+        if (event.data.payload.error) {
+          accessToken = null;
+          singlePill.changeAuthenticationState(false);
+          
+          
+        } else {
+          accessToken = event.data.payload.accessToken;
+          singlePill.changeAuthenticationState(true);
+
+          
+        }
+      }
+    });
+
     setupSlashListeners();
     observeDocChanges();
 
-    console.log("[Enhanced Text Tracker] gdocs-main.js init complete.");
+    
 
     function setupSlashListeners() {
       attachListeners(document);
@@ -297,7 +256,7 @@ export function initializeGDocsTracker() {
 
     function attachListeners(doc) {
       doc.addEventListener("keydown", e => {
-        if (e.key === "/" || e.keyCode === 191) {
+        if ((e.key === "/" || e.keyCode === 191) && !e.shiftKey) {
           const cursor = document.querySelector(".kix-cursor") || document.querySelector(".docs-text-ui-cursor-blink");
           if (!cursor) return;
           const rect = cursor.getBoundingClientRect();
@@ -338,8 +297,26 @@ export function initializeGDocsTracker() {
       }
       let previousCorrections = new Set();
       const debouncedApiUpdate = debounce(async () => {
+        if (!accessToken) {
+          
+
+          return;
+        }
+
         const freshText = await ApiService.collectTextFromRects();
-        const newApiData = await ApiService.fetchDataFromApi();
+        const newApiData = await ApiService.fetchDataFromApi(accessToken);
+
+        if (newApiData.error) {
+          
+
+          if (newApiData.error === "Unauthorized") {
+            accessToken = null;
+            singlePill.changeAuthenticationState(false);
+          }
+
+          return;
+        }
+
         apiData = newApiData;
         const newCorrections = ApiService.findCorrectionsInDocument(apiData, freshText);
         underline.buildRectCharIndexMapping();

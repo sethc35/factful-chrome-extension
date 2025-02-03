@@ -30,7 +30,7 @@ export class ApiService {
         fullText += lineText
       })
     })
-    console.log('full text: ', fullText);
+    
     return fullText.trim()
   }
 
@@ -47,25 +47,36 @@ export class ApiService {
     )
   }
 
-  static async fetchDataFromApi() {
+  static async fetchDataFromApi(accessToken) {
     try {
+      if (!accessToken) {
+        return { error: "Unauthorized" }
+      }
+      
       const textContent = await ApiService.collectTextFromRects()
-      console.log('fetching data now!')
+      
       const query = encodeURIComponent(textContent)
       const response = await fetch(
         `https://backend.factful.io/process_text?input=${query}`,
         {
           method: "GET",
           headers: {
+            "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json"
           }
         }
       )
       if (!response.ok) {
+        if (response.status === 401) {
+          return { error: "Unauthorized" }
+        }
+
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      console.log('get back: ', data);
+
+      
+
       return data || {}
     } catch (error) {
       return { error: error.message }
@@ -74,7 +85,11 @@ export class ApiService {
 
   static findCorrectionsInDocument(apiData, documentText) {
     const corrections = []
-    if (!apiData?.corrections?.length) {
+    if (apiData?.error) {
+      
+
+      return corrections
+    } else if (!apiData?.corrections?.length) {
       return corrections
     }
     function getAbsolutePosition(rect) {

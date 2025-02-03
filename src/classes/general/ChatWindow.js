@@ -176,7 +176,7 @@ export class ChatWindow {
         stroke-linecap: round;
         stroke-linejoin: round;
       }
-      .grammarly-caret {
+      .factful-caret {
         position: absolute;
         width: 8px;
         height: 8px;
@@ -209,7 +209,7 @@ export class ChatWindow {
       .close-button {
         position: absolute;
         right: 16px;
-        top: 7%;
+        top: 5%;
         transform: translateY(-50%);
         width: 20px;
         height: 20px;
@@ -225,6 +225,124 @@ export class ChatWindow {
 
     .close-button:hover {
         color: #000;
+    }
+    .search-button {
+        min-width: 36px;
+        height: 36px;
+        padding: 8px;
+        border: none;
+        border-radius: 8px;
+        background-color: #0177FC;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
+    }
+
+    .search-button:hover {
+        background-color: #0156b3;
+    }
+
+    .search-results {
+        margin-top: 16px;
+        border-top: 1px solid #e0e0e0;
+    }
+    .search-button.disabled {
+        background-color: #e0e0e0;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    .search-button.disabled svg {
+        stroke: #999;
+    }
+    .tab-container {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+      background-color: #f8f8f8;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #71717a;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      color: #0177FC;
+      border-bottom-color: #0177FC;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .compose-section {
+      padding: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .compose-textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    }
+
+    .suggestion-container {
+      display: flex;
+      flex-direction: column;
+      height: 200px; /* Fixed height */
+      margin: 16px 0;
+    }
+
+    .suggestion-text {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 16px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .suggestion-buttons {
+      display: flex;
+      gap: 10px;
+      padding-top: 10px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .compose-button {
+      background-color: #0177FC;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .compose-button:hover {
+      background-color: #0156b3;
     }
     `;
     document.head.appendChild(styleTag);
@@ -242,7 +360,7 @@ export class ChatWindow {
     starIcon.appendChild(starPolygon);
     header.appendChild(starIcon);
     const title = document.createElement("h3");
-    title.textContent = "Enhancements";
+    title.textContent = "Factful AI Actions";
     header.appendChild(title);
 
     const closeButton = document.createElement("button");
@@ -262,6 +380,7 @@ export class ChatWindow {
     const qaSubtitle = document.createElement("p");
     qaSubtitle.textContent = "Select text to apply changes.";
     quickActionsSection.appendChild(qaSubtitle);
+    body.appendChild(quickActionsSection);
 
     const quickActionsContainer = document.createElement("div");
     quickActionsContainer.classList.add("quick-actions-container");
@@ -421,6 +540,7 @@ export class ChatWindow {
     ];
 
     const languageSelect = document.createElement("select");
+    languageSelect.classList.add('translate-row-select');
     languageSelect.style.color = "#000";
     languageSelect.style.backgroundColor = "#fff";
     languageSelect.style.border = "1px solid #ccc";
@@ -441,58 +561,90 @@ export class ChatWindow {
 
     quickActionsSection.appendChild(quickActionsContainer);
 
-    const researchSection = document.createElement("div");
-    researchSection.classList.add("research-section");
-    const researchTitle = document.createElement("h4");
-    researchTitle.textContent = "Research";
-    researchSection.appendChild(researchTitle);
-    const researchSubtitle = document.createElement("p");
-    researchSubtitle.textContent = "Search for anything on the web.";
-    researchSection.appendChild(researchSubtitle);
     const searchContainer = document.createElement("div");
     searchContainer.classList.add("research-input-wrapper");
+    searchContainer.style.display = "flex";
+    searchContainer.style.alignItems = "center";
+    searchContainer.style.gap = "8px";
+
+    const inputWrapper = document.createElement("div");
+    inputWrapper.style.position = "relative";
+    inputWrapper.style.flex = "1";
+
     const searchInput = document.createElement("input");
     searchInput.type = "text";
     searchInput.placeholder = "How long was the Queen's rule?";
-    const searchIcon = document.createElement("svg");
-    searchIcon.classList.add("search-icon", "icon-search");
-    searchIcon.setAttribute("viewBox", "0 0 24 24");
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", "11");
-    circle.setAttribute("cy", "11");
-    circle.setAttribute("r", "8");
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", "21");
-    line.setAttribute("y1", "21");
-    line.setAttribute("x2", "16.65");
-    line.setAttribute("y2", "16.65");
-    searchIcon.appendChild(circle);
-    searchIcon.appendChild(line);
-    searchContainer.appendChild(searchIcon);
-    searchContainer.appendChild(searchInput);
-    researchSection.appendChild(searchContainer);
+    this.searchInput = searchInput;
 
-    body.appendChild(quickActionsSection);
-    body.appendChild(researchSection);
+    const searchButton = document.createElement("button");
+    searchButton.classList.add("search-button");
+    searchButton.style.width = "36px";
+    searchButton.style.height = "36px";
+    searchButton.style.padding = "8px";
+    searchButton.style.border = "none";
+    searchButton.style.borderRadius = "8px";
+    searchButton.style.backgroundColor = "#0177FC";
+    searchButton.style.cursor = "pointer";
+    searchButton.style.display = "flex";
+    searchButton.style.alignItems = "center";
+    searchButton.style.justifyContent = "center";
+    this.searchButton = searchButton;
 
-    this.chatWindow.appendChild(header);
-    this.chatWindow.appendChild(body);
+    const arrowSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    arrowSvg.setAttribute("viewBox", "0 0 24 24");
+    arrowSvg.setAttribute("width", "20");
+    arrowSvg.setAttribute("height", "20");
+    arrowSvg.style.fill = "none";
+    arrowSvg.style.stroke = "#ffffff";
+    arrowSvg.style.strokeWidth = "2";
+    arrowSvg.style.strokeLinecap = "round";
+    arrowSvg.style.strokeLinejoin = "round";
+
+    const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    arrowPath.setAttribute("d", "M5 12h14M12 5l7 7-7 7");
+    arrowSvg.appendChild(arrowPath);
+    searchButton.appendChild(arrowSvg);
+
+    inputWrapper.appendChild(searchInput);
+    searchContainer.appendChild(inputWrapper);
+    searchContainer.appendChild(searchButton);
+
+    const tabContainer = document.createElement("div");
+    tabContainer.classList.add("tab-container");
+
+    const enhancementsTab = document.createElement("div");
+    enhancementsTab.classList.add("tab", "active");
+    enhancementsTab.textContent = "Enhancements";
+    enhancementsTab.dataset.tab = "enhancements";
+
+    const composeTab = document.createElement("div");
+    composeTab.classList.add("tab");
+    composeTab.textContent = "Compose";
+    composeTab.dataset.tab = "compose";
+
+    tabContainer.appendChild(enhancementsTab);
+    tabContainer.appendChild(composeTab);
+
+    const enhancementsContent = document.createElement("div");
+    enhancementsContent.classList.add("tab-content", "active");
+    enhancementsContent.id = "enhancements-content";
+    enhancementsContent.appendChild(body);
 
     this.suggestionSection = document.createElement("div");
     this.suggestionSection.classList.add("suggestion-section");
     this.suggestionSection.style.display = "none";
 
     const container = document.createElement("div");
-    container.style.display = "flex";
-    container.style.alignItems = "center";
-    container.style.gap = "10px";
-    container.style.margin = "16px 0";
+    container.classList.add("suggestion-container");
 
+    const textContainer = document.createElement("div");
+    textContainer.classList.add("suggestion-text");
     const placeholderText = document.createElement("p");
-    placeholderText.style.flex = "1";
-    placeholderText.style.fontSize = "14px";
-    placeholderText.style.color = "#333";
     placeholderText.textContent = "Placeholder Text";
+    textContainer.appendChild(placeholderText);
+
+    const buttonContainer = document.createElement("div");
+    buttonContainer.classList.add("suggestion-buttons");
 
     const acceptButton = document.createElement("button");
     acceptButton.classList.add("accept-suggestion");
@@ -504,16 +656,6 @@ export class ChatWindow {
     acceptButton.style.cursor = "pointer";
     acceptButton.textContent = "Accept";
 
-    const retryButton = document.createElement("button");
-    retryButton.classList.add("retry-suggestion");
-    retryButton.style.backgroundColor = "#0177FC";
-    retryButton.style.color = "#fff";
-    retryButton.style.border = "none";
-    retryButton.style.padding = "8px 12px";
-    retryButton.style.borderRadius = "6px";
-    retryButton.style.cursor = "pointer";
-    retryButton.textContent = "Retry";
-
     const deleteButton = document.createElement("button");
     deleteButton.classList.add("delete-suggestion");
     deleteButton.style.backgroundColor = "#f44336";
@@ -524,12 +666,51 @@ export class ChatWindow {
     deleteButton.style.cursor = "pointer";
     deleteButton.textContent = "Delete";
 
-    container.appendChild(placeholderText);
-    container.appendChild(acceptButton);
-    container.appendChild(retryButton);
-    container.appendChild(deleteButton);
+    buttonContainer.appendChild(acceptButton);
+    buttonContainer.appendChild(deleteButton);
+
+    container.appendChild(textContainer);
+    container.appendChild(buttonContainer);
     this.suggestionSection.appendChild(container);
-    this.chatWindow.appendChild(this.suggestionSection);
+    enhancementsContent.appendChild(this.suggestionSection);
+
+    const composeContent = document.createElement("div");
+    composeContent.classList.add("tab-content");
+    composeContent.id = "compose-content";
+
+    const composeSection = document.createElement("div");
+    composeSection.classList.add("compose-section");
+
+    const composeTextarea = document.createElement("textarea");
+    composeTextarea.classList.add("compose-textarea");
+    composeTextarea.placeholder = "Enter your prompt here...";
+
+    const composeButton = document.createElement("button");
+    composeButton.classList.add("compose-button");
+    composeButton.textContent = "Generate";
+
+    composeSection.appendChild(composeTextarea);
+    composeSection.appendChild(composeButton);
+    composeContent.appendChild(composeSection);
+
+    this.chatWindow.appendChild(header);
+    this.chatWindow.appendChild(tabContainer);
+    this.chatWindow.appendChild(enhancementsContent);
+    this.chatWindow.appendChild(composeContent);
+
+    this.initializeTabs();
+    this.initializeCompose();
+
+    const researchSection = document.createElement("div");
+    researchSection.classList.add("research-section");
+    const researchTitle = document.createElement("h4");
+    researchTitle.textContent = "Research";
+    researchSection.appendChild(researchTitle);
+    const researchDescription = document.createElement("p");
+    researchDescription.textContent = "Search for information about any topic.";
+    researchSection.appendChild(researchDescription);
+    researchSection.appendChild(searchContainer);
+    body.appendChild(researchSection);
 
     const highlightOverlay = document.createElement("div");
     highlightOverlay.classList.add("highlight-overlay");
@@ -637,6 +818,18 @@ export class ChatWindow {
     } else if (el.contentEditable === 'true' || el.closest('[contenteditable="true"]')) {
         this.storeSelectionData();
         this.lastContentLength = el.textContent.length;
+    }
+  }
+
+  enableSearchButton(button) {
+    button.disabled = false;
+    button.style.backgroundColor = '#0177FC';
+    button.style.cursor = 'pointer';
+    button.style.opacity = '1';
+    
+    const svg = button.querySelector('svg');
+    if (svg) {
+        svg.style.stroke = '#ffffff';
     }
   }
 
@@ -796,11 +989,17 @@ export class ChatWindow {
   insertTextAtCursor(text) {
     const el = this.lastFocusedElement;
     if (!el) {
-        console.log('No focused element');
+        
         return;
     }
 
     if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+        el.focus();
+
+        if (el.selectionStart === el.selectionEnd) {
+            el.selectionStart = el.selectionEnd = el.value.length;
+        }
+        
         const cursorPos = el.selectionStart || el.value.length;
         const textBefore = el.value.substring(0, cursorPos);
         const textAfter = el.value.substring(cursorPos);
@@ -810,9 +1009,15 @@ export class ChatWindow {
         el.selectionEnd = newPos;
         el.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (el.contentEditable === 'true') {
+        el.focus();
+        
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
+            if (range.collapsed) {
+                range.selectNodeContents(el);
+                range.collapse(false);
+            }
             const textNode = document.createTextNode(text);
             range.insertNode(textNode);
             range.setStartAfter(textNode);
@@ -820,51 +1025,51 @@ export class ChatWindow {
             selection.removeAllRanges();
             selection.addRange(range);
         } else {
-            // If no range, append to the end
             const textNode = document.createTextNode(text);
             el.appendChild(textNode);
+            const range = document.createRange();
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
     }
   }
 
   initButtonEvents() {
     this.paraphraseButton.addEventListener("click", () => {
-        let selectedText = '';
+      let selectedText = '';
+      
+      if (this.lastFocusedElement) {
+          if (this.lastFocusedElement.tagName === "TEXTAREA") {
+              selectedText = this.lastFocusedElement.value.substring(
+                  this.selectionStart,
+                  this.selectionEnd
+              );
+          } else if (this.cachedRange) {
+              selectedText = this.cachedRange.toString();
+          }
+      }
+  
+      
+  
+      if (!selectedText) {
+          
+          return;
+      }
+  
+      chrome.runtime.sendMessage({
+          action: "sendButton",
+          command: "paraphrase",
+          parameter: selectedText
+      }, response => {
         
-        if (this.lastFocusedElement) {
-            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
-                selectedText = this.lastFocusedElement.value.substring(
-                    this.selectionStart,
-                    this.selectionEnd
-                );
-            } else if (this.cachedRange) {
-                selectedText = this.cachedRange.toString();
-            }
-        }
-
-        if (!selectedText) {
-            console.log('No text selected');
-            return;
-        }
-
-        this.lastCommand = 'paraphrase';
-        this.lastInput = selectedText;
-        this.lastLanguage = null;
-
-        try {
-            chrome.runtime.sendMessage({
-                command: 'paraphrase',
-                input: selectedText
-            }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
-        } catch (error) {
-            this.showSuggestionSection("Error fetching text");
-        }
+          if (response && response['paraphrased-text']) {
+              this.showSuggestionSection(response['paraphrased-text']);
+          } else {
+              this.showSuggestionSection("Error fetching text");
+          }
+      });
     });
 
     this.summarizeButton.addEventListener("click", () => {
@@ -882,7 +1087,7 @@ export class ChatWindow {
         }
 
         if (!selectedText) {
-            console.log('No text selected');
+            
             return;
         }
 
@@ -891,26 +1096,28 @@ export class ChatWindow {
         this.lastLanguage = null;
 
         try {
-            chrome.runtime.sendMessage({
-                command: 'summarize',
-                input: selectedText
-            }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
+          chrome.runtime.sendMessage({
+              action: "sendButton",
+              command: "summarize",
+              parameter: selectedText
+          }, response => {
+            
+              if (response && response['summarized-text']) {
+                  this.showSuggestionSection(response['summarized-text']);
+              } else {
+                  this.showSuggestionSection("Error fetching text");
+              }
+          });     
         } catch (error) {
             this.showSuggestionSection("Error fetching text");
         }
-    });
+      });
 
-    this.translateButton.addEventListener("click", () => {
+      this.translateButton.addEventListener("click", () => {
         let selectedText = '';
         
         if (this.lastFocusedElement) {
-            if (this.lastFocusedElement.tagName === 'TEXTAREA') {
+            if (this.lastFocusedElement.tagName === "TEXTAREA") {
                 selectedText = this.lastFocusedElement.value.substring(
                     this.selectionStart,
                     this.selectionEnd
@@ -919,60 +1126,140 @@ export class ChatWindow {
                 selectedText = this.cachedRange.toString();
             }
         }
-
+    
+        
+    
         if (!selectedText) {
-            console.log('No text selected');
+            
             return;
         }
 
-        const targetLanguage = this.chatWindow.querySelector('select').value;
+        const languageSelect = this.chatWindow.querySelector('.translate-row select');
+        const targetLanguage = languageSelect.value;
         
-        this.lastCommand = 'translate';
-        this.lastInput = selectedText;
-        this.lastLanguage = targetLanguage;
+        
+    
+        chrome.runtime.sendMessage({
+            action: "sendButton",
+            command: "translate",
+            parameter: selectedText,
+            language: targetLanguage
+        }, response => {
+            
+            if (response && response['translated-text']) {
+                this.showSuggestionSection(response['translated-text']);
+            } else {
+                this.showSuggestionSection("Error translating text");
+            }
+        });
+      });
 
+      const searchInput = this.searchInput;
+      const searchButton = this.searchButton;
+      const handleSearch = async () => {
+        const searchQuery = searchInput.value.trim();
+        if (!searchQuery) return;
+
+        searchButton.classList.add('disabled');
+        searchButton.disabled = true;
+        searchButton.style.backgroundColor = '#e0e0e0';
+        searchButton.style.cursor = 'not-allowed';
+        searchButton.style.opacity = '0.7';
+
+        const svg = searchButton.querySelector('svg');
+        if (svg) {
+            svg.style.stroke = '#999';
+        }
+
+        searchInput.disabled = true;
+    
+        this.lastCommand = 'search';
+        this.lastInput = searchQuery;
+        this.lastLanguage = null;
+    
         try {
             chrome.runtime.sendMessage({
-                command: 'translate',
-                input: selectedText,
-                language: targetLanguage
+                action: "sendButton",
+                command: "search",
+                parameter: searchQuery
             }, response => {
-                if (response && response.output) {
-                    this.showSuggestionSection(response.output);
+                
+                if (response && response.final_result) {
+                    const searchResultsContainer = document.createElement('div');
+                    searchResultsContainer.style.padding = '16px';
+                    searchResultsContainer.style.display = 'flex';
+                    searchResultsContainer.style.flexDirection = 'column';
+                    searchResultsContainer.style.gap = '16px';
+
+                    const resultText = document.createElement("p");
+                    resultText.style.fontSize = "14px";
+                    resultText.style.lineHeight = "1.5";
+                    resultText.textContent = response.final_result;
+                    searchResultsContainer.appendChild(resultText);
+
+                    if (response.sources && response.sources.length > 0) {
+                        const sourcesContainer = document.createElement('div');
+                        sourcesContainer.style.display = 'flex';
+                        sourcesContainer.style.flexDirection = 'column';
+                        sourcesContainer.style.gap = '8px';
+    
+                        const sourcesTitle = document.createElement('p');
+                        sourcesTitle.style.fontSize = '14px';
+                        sourcesTitle.style.fontWeight = 'bold';
+                        sourcesTitle.textContent = 'Sources:';
+                        sourcesContainer.appendChild(sourcesTitle);
+    
+                        response.sources.forEach(source => {
+                            const link = document.createElement('a');
+                            link.href = source;
+                            link.target = '_blank';
+                            link.style.color = '#0177FC';
+                            link.style.textDecoration = 'none';
+                            link.style.fontSize = '12px';
+                            link.textContent = source;
+                            link.addEventListener('mouseover', () => link.style.textDecoration = 'underline');
+                            link.addEventListener('mouseout', () => link.style.textDecoration = 'none');
+                            sourcesContainer.appendChild(link);
+                        });
+    
+                        searchResultsContainer.appendChild(sourcesContainer);
+                    }
+
+                    const existingResults = this.chatWindow.querySelector('.search-results');
+                    if (existingResults) {
+                        existingResults.remove();
+                    }
+                    searchResultsContainer.classList.add('search-results');
+                    this.chatWindow.appendChild(searchResultsContainer);
+                    setTimeout(() => {
+                      this.enableSearchButton(searchButton);
+                      searchInput.disabled = false;
+                      searchInput.value = '';
+                    }, 100);
                 } else {
-                    this.showSuggestionSection("Error fetching text");
+                    const errorContainer = document.createElement('div');
+                    errorContainer.innerHTML = '<p style="color: #ff0000;">Error searching</p>';
+                    this.chatWindow.appendChild(errorContainer);
                 }
             });
         } catch (error) {
-            this.showSuggestionSection("Error fetching text");
+            searchButton.classList.remove('disabled');
+            searchButton.disabled = false;
+            searchInput.disabled = false;
+            const errorContainer = document.createElement('div');
+            errorContainer.innerHTML = '<p style="color: #ff0000;">Error searching</p>';
+            this.chatWindow.appendChild(errorContainer);
+        }
+    };
+    
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
         }
     });
-
-    const searchInput = this.chatWindow.querySelector('.research-input-wrapper input');
-    searchInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-            const searchQuery = searchInput.value.trim();
-            if (!searchQuery) return;
-
-            this.lastCommand = 'search';
-            this.lastInput = searchQuery;
-            this.lastLanguage = null;
-
-            try {
-                chrome.runtime.sendMessage({
-                    command: 'search',
-                    input: searchQuery
-                }, response => {
-                    if (response && response.search_results && response.search_results[0]) {
-                        this.showSuggestionSection(response.search_results[0]);
-                    } else {
-                        this.showSuggestionSection("Error searching");
-                    }
-                });
-            } catch (error) {
-                this.showSuggestionSection("Error searching");
-            }
-        }
+    
+    searchButton.addEventListener('click', () => {
+        handleSearch();
     });
 
     this.suggestionSection.querySelector(".accept-suggestion").addEventListener("click", () => {
@@ -990,35 +1277,6 @@ export class ChatWindow {
         }
     });
 
-    this.suggestionSection.querySelector(".retry-suggestion").addEventListener("click", () => {
-        if (!this.lastCommand || !this.lastInput) {
-            console.log('No previous command to retry');
-            return;
-        }
-
-        try {
-            const message = {
-                command: this.lastCommand,
-                input: this.lastInput
-            };
-
-            if (this.lastCommand === 'translate' && this.lastLanguage) {
-                message.language = this.lastLanguage;
-            }
-
-            chrome.runtime.sendMessage(message, response => {
-                if (response && (response.output || (response.search_results && response.search_results[0]))) {
-                    const result = response.output || response.search_results[0];
-                    this.showSuggestionSection(result);
-                } else {
-                    this.showSuggestionSection("Error fetching text");
-                }
-            });
-        } catch (error) {
-            this.showSuggestionSection("Error fetching text");
-        }
-    });
-
     this.suggestionSection.querySelector(".delete-suggestion").addEventListener("click", () => {
         this.deleteSuggestion();
     });
@@ -1026,7 +1284,7 @@ export class ChatWindow {
 
   replaceHighlightedText(replacementText) {
     const el = this.lastFocusedElement;
-    console.log('last focused element: ', el);
+    
     if (!el) return;
   
     if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
@@ -1057,45 +1315,25 @@ export class ChatWindow {
     }
   }
 
+  clearSearchResults = () => {
+    const existingResults = this.chatWindow.querySelector('.search-results');
+    if (existingResults) {
+        existingResults.remove();
+    }
+    searchButton.classList.remove('disabled');
+    searchButton.disabled = false;
+  };
+
   showSuggestionSection(suggestionText) {
-    const suggestionTextElement = this.suggestionSection.querySelector("p");
+    const suggestionTextElement = this.suggestionSection.querySelector(".suggestion-text p");
     suggestionTextElement.textContent = suggestionText;
-    this.suggestionSection.style.display = "flex";
+    this.suggestionSection.style.display = "block";
   }
 
   acceptSuggestion() {
     const suggestionText = this.suggestionSection.querySelector("p").textContent;
     this.replaceHighlightedText(suggestionText);
     this.deleteSuggestion();
-  }
-
-  retrySuggestion() {
-    if (!this.lastCommand || !this.lastInput) {
-        console.log('No previous command to retry');
-        return;
-    }
-
-    try {
-        const message = {
-            command: this.lastCommand,
-            input: this.lastInput
-        };
-
-        if (this.lastCommand === 'translate' && this.lastLanguage) {
-            message.language = this.lastLanguage;
-        }
-
-        chrome.runtime.sendMessage(message, response => {
-            if (response && (response.output || (response.search_results && response.search_results[0]))) {
-                const result = response.output || response.search_results[0];
-                this.showSuggestionSection(result);
-            } else {
-                this.showSuggestionSection("Error fetching text");
-            }
-        });
-    } catch (error) {
-        this.showSuggestionSection("Error fetching text");
-    }
   }
 
   deleteSuggestion() {
@@ -1220,7 +1458,7 @@ export class ChatWindow {
 
   createCaret() {
     const div = document.createElement("div");
-    div.className = "grammarly-caret";
+    div.className = "factful-caret";
     div.innerHTML = ``;
     document.body.appendChild(div);
     return div;
@@ -1234,5 +1472,56 @@ export class ChatWindow {
       i++;
     }
     return selectionEnd;
+  }
+
+  initializeTabs() {
+    const tabs = this.chatWindow.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            this.chatWindow.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            tab.classList.add('active');
+            const contentId = `${tab.dataset.tab}-content`;
+            this.chatWindow.querySelector(`#${contentId}`).classList.add('active');
+        });
+    });
+}
+
+initializeCompose() {
+    const composeButton = this.chatWindow.querySelector('.compose-button');
+    const composeTextarea = this.chatWindow.querySelector('.compose-textarea');
+
+    composeButton.addEventListener('click', async () => {
+        const prompt = composeTextarea.value.trim();
+        if (!prompt) return;
+
+        composeButton.disabled = true;
+        composeButton.textContent = 'Generating...';
+
+        try {
+            chrome.runtime.sendMessage({
+                action: "sendCommand",
+                command: "/generate",
+                parameter: prompt
+            }, response => {
+                if (response && response.generated_text) {
+                    this.showSuggestionSection(response.generated_text);
+                    this.chatWindow.querySelector('[data-tab="enhancements"]').click();
+                } else {
+                    alert('Error generating text');
+                }
+                composeButton.disabled = false;
+                composeButton.textContent = 'Generate';
+            });
+        } catch (error) {
+            
+            alert('Error generating text');
+            composeButton.disabled = false;
+            composeButton.textContent = 'Generate';
+        }
+    });
   }
 }

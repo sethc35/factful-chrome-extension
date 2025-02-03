@@ -327,7 +327,7 @@ export class Underline {
     if (typeof updateAllPills === "function") {
       updateAllPills(corrections.length)
     }
-    console.log("[Enhanced Text Tracker] Underlines and event listeners updated.")
+    
   }
 
   static findTextDifferences(oldText, newText) {

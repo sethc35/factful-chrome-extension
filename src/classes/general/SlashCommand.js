@@ -21,6 +21,12 @@ export class SlashCommand {
                 parameters: [
                     { name: 'word', type: 'text' }
                 ]
+            },
+            "/generate": {
+                description: "Generate text",
+                parameters: [
+                    { name: "word", type: "text" }
+                ]
             }
         }
         this.isActive = false
@@ -635,6 +641,26 @@ export class SlashCommand {
         return null
     }
 
+    getPrecedingWords(element, wordCount = 10) {
+        let text = '';
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+            const cursorPosition = element.selectionStart;
+            text = element.value.substring(0, cursorPosition);
+        } else if (element.isContentEditable) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(element);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+                text = preCaretRange.toString();
+            }
+        }
+
+        const words = text.trim().split(/\s+/);
+        return words.slice(-wordCount).join(' ');
+    }
+
     createSpinner() {
         const spinner = document.createElement('span')
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -667,31 +693,44 @@ export class SlashCommand {
 
     async processCommand(command, parameter, targetElement) {
         try {
+            let context = '';
+            if (command === '/search') {
+                context = this.getPrecedingWords(targetElement);
+            }
+    
             const response = await chrome.runtime.sendMessage({
                 action: 'sendCommand',
                 command: command,
-                parameter: parameter
-            })
-
+                parameter: parameter,
+                context: context
+            });
+    
             if (!response || response.error) {
-                return null
+                return null;
             }
             if (command === '/synonym' && response.synonyms?.length) {
-                return this.createPopdown(response.synonyms, targetElement)
+                return this.createPopdown(response.synonyms, targetElement);
             }
             if (command === '/antonym' && response.antonyms?.length) {
-                return this.createPopdown(response.antonyms, targetElement)
+                return this.createPopdown(response.antonyms, targetElement);
             }
-            if (command === '/search' && response.search_results?.length) {
-                return this.createPopdown(response.search_results, targetElement)
+            if (command === '/search' && response.final_result?.length) {
+                
+                return this.createPopdown(response.final_result, targetElement);
             }
-            return null
+            if (command === '/generate' && response.generated_text?.length) {
+                
+                return this.createPopdown(response.generated_text, targetElement);
+            }
+            return null;
         } catch {
-            return null
+            return null;
         }
     }
 
     async createPopdown(items, targetElement) {
+        const itemsArray = Array.isArray(items) ? items : [items];
+        
         const popdown = document.createElement('div');
         popdown.style.position = 'fixed';
         popdown.style.backgroundColor = '#fff';
@@ -713,7 +752,7 @@ export class SlashCommand {
     
         let isProcessing = false;
     
-        items.forEach(item => {
+        itemsArray.forEach(item => {
             const btn = document.createElement('button');
             btn.textContent = item;
             btn.style.padding = '8px 12px';
@@ -787,7 +826,7 @@ export class SlashCommand {
             
                         element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                     } catch (error) {
-                        console.error('Insertion error:', error);
+                        
                     }
             
                     setTimeout(() => {

@@ -6,7 +6,7 @@ import { SlashCommand } from '../../classes/general/SlashCommand.js'
 import { Tooltip } from '../../classes/general/Tooltip.js'
 import { Underline } from '../../classes/general/Underline.js'
 
-function initializeExtension() {
+async function initializeExtension() {
   let activeElement = null
   let hoveredUnderline = null
   let currentHoverElement = null
@@ -20,7 +20,38 @@ function initializeExtension() {
   let tooltipVisible = false
   let lastTooltipId = null
 
+  const settings = await chrome.storage.sync.get({ disabledDomains: [] });
+  const disabledDomains = settings.disabledDomains;
+
+  const currentUrl = window.location.href;
+  const baseUrl = new URL(currentUrl).hostname;
+
+  
+  
+
+  if (disabledDomains.includes(baseUrl)) {
+      
+      return;
+  }
+
   const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
+
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'setAccessToken') {
+      if (request.error) {
+        pill.changeAuthenticationState(false)
+
+        
+      } else {
+        pill.changeAuthenticationState(true)
+
+        
+      }
+
+      sendResponse({ success: true });
+    }
+    return true;
+  });
 
   function debounce(func, wait) {
     let timeout
@@ -34,14 +65,19 @@ function initializeExtension() {
 
   async function fetchDataFromBackend(element) {
     const text = element.value || element.textContent || ''
+
     return chrome.runtime.sendMessage({
       action: 'fetchData',
       textInput: text
     }).then(response => {
-      console.log('get back from fetch data: ', response);
       if (response.error) {
-        return null
+        
+
+        return;
       }
+
+      
+
       return response
     }).catch(() => null)
   }
@@ -412,7 +448,7 @@ function initializeExtension() {
           }, 500)
         }
       } catch (error) {
-        console.log('error clicking tooltip: ', error)
+        
       }
     }
   })

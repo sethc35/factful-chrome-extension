@@ -1,9 +1,16 @@
 import { initializeGDocsTracker } from './gdocs-main.js';
 
-console.log("[Main] Initializing Enhanced Text Tracker...");
-var differentiator = true;
-if (differentiator)
-{
-    console.log(differentiator);
+
+
+const canRun = localStorage.getItem('canFactfulRun') !== 'false';
+if (canRun) {
+    
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        window.trustedTypes.createPolicy('default', {
+            createHTML: (input) => input
+        });
+    }
     initializeGDocsTracker();
+} else {
+    
 }
