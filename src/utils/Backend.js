@@ -31,7 +31,7 @@ Backend.fetchData = async function(textInput) {
     }
 }
 
-Backend.sendCommand = async function(command, parameter, useSearch = false) {
+Backend.sendCommand = async function(command, parameter, useSearch = false, context) {
     const accessToken = getAccessToken();
     const settings = returnSettings();
     if (!accessToken) {
@@ -44,6 +44,7 @@ Backend.sendCommand = async function(command, parameter, useSearch = false) {
         let isSearch = false;
         let isGenerate = false;
         console.log('query + command: ', query, command);
+        console.log('context reference? ', context);
         
         switch (command) {
             case '/synonym':
@@ -68,7 +69,7 @@ Backend.sendCommand = async function(command, parameter, useSearch = false) {
 
         var url;
         if (isSearch) {
-            url = `https://backend.factful.io/${endpoint}/${query}`;
+            url = `https://backend.factful.io/${endpoint}?query=${query}&context=${context}`;
         } else if (isGenerate) {
             url = `https://backend.factful.io/${endpoint}?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`;
         } else {
