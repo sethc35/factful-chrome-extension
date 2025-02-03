@@ -229,7 +229,7 @@
                     container.remove();
                 }, 100);
             } catch (error) {
-                console.error('Error during correction acceptance:', error);
+                
             }
         });
 
@@ -1292,7 +1292,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            console.error("Chat container not found");
+            
             return;
         }
 
@@ -1345,7 +1345,7 @@
         try {
             await this.makeApiCall(message, useSearch);
         } catch (error) {
-            console.error('Error:', error);
+            
     
             const errorMessage = document.createElement('div');
             errorMessage.classList.add('message', 'bot');
@@ -1401,7 +1401,7 @@
                 window.addEventListener('message', handleResponse);
             });
         } catch (error) {
-            console.error('API call error:', error);
+            
             throw error;
         }
     }    
@@ -1410,7 +1410,7 @@
         const messagesContainer = document.querySelector('.messages-container');
 
         if (!messagesContainer) {
-            console.error("Chat container not found");
+            
             return;
         }
 
@@ -1451,7 +1451,7 @@
                     copyButton.style.color = '';
                 }, 2000);
             } catch (err) {
-                console.error('Copy failed:', err);
+                
                 copyButton.textContent = 'Copy failed!';
                 copyButton.style.backgroundColor = 'red';
                 copyButton.style.color = 'white';

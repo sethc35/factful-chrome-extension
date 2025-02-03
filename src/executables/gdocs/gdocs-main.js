@@ -126,7 +126,7 @@ export function initializeGDocsTracker() {
           );
 
           if (!matchingUnderline) {
-            console.error('No matching underline found for correction');
+            
             return;
           }
 
@@ -174,7 +174,7 @@ export function initializeGDocsTracker() {
           }));
 
         } catch (error) {
-          console.error('Error in handleCorrection:', error);
+          
           throw error;
         }
       },

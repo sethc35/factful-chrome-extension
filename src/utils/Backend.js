@@ -5,11 +5,15 @@ var Backend = Backend || {};
 Backend.fetchData = async function(textInput) {
     try {
         const query = encodeURIComponent(textInput);
-        const settings = returnSettings();
-        const response = await fetch(`https://backend.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`, {
+        const settings = await returnSettings();
+        const accessToken = await getAccessToken();
+        const url = `https://backend.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
             }
         });
 
@@ -32,8 +36,8 @@ Backend.fetchData = async function(textInput) {
 }
 
 Backend.sendCommand = async function(command, parameter, useSearch = false, context) {
-    const accessToken = getAccessToken();
-    const settings = returnSettings();
+    const accessToken = await getAccessToken();
+    const settings = await returnSettings();
     if (!accessToken) {
         return;
     }
@@ -111,7 +115,7 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
 Backend.sendButton = async function(command, input, language, useSearch = false) {
     try {
         const query = encodeURIComponent(input);
-        const settings = returnSettings();
+        const settings = await returnSettings();
         let endpoint;
         let isSearch = false;
         let isTranslate = false;
@@ -176,7 +180,7 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
 Backend.fetchHtml = async function(textInput, useSearch = false) {
     try {
         const query = encodeURIComponent(textInput);
-        const settings = returnSettings();
+        const settings = await returnSettings();
         
         
         const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`, {
@@ -274,7 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 
                 sendResponse(data);
             } catch (error) {
-                console.error('Error fetching HTML:', error);
+                
                 sendResponse({ error: 'Failed to fetch HTML' });
             }
         })();
@@ -372,7 +376,7 @@ function relayData(data, tabId) {
             if (window.relayData) {
                 window.relayData(data);
             } else {
-                console.error('[Authenticator] relayData is not defined.');
+                
             }
         },
         args: [data],
@@ -546,7 +550,7 @@ async function handleAuthentication() {
                         };
                     }
                 } catch (error) {
-                    console.error('Authentication error:', error);
+                    
                     chrome.tabs.onUpdated.removeListener(handleAuthComplete);
                     throw error;
                 }
