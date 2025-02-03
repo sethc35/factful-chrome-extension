@@ -170,6 +170,34 @@ Backend.sendButton = async function(command, input, language) {
     }
 }
 
+Backend.fetchHtml = async function(textInput) {
+    try {
+        const query = encodeURIComponent(textInput);
+        const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        return { error: "Unauthorized" }
+                    }
+
+                    throw new Error(`[APIService] HTTP error! Status: ${response.status}`);
+                }
+
+        const data = await response.json();
+        console.log("Backend fetchData received data:", data);
+        return data || {};
+
+    } catch (error) {
+        console.log("fetchData() Error: " + error);
+        return { error: error.message };
+    }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "fetchData") {
         (async () => {
@@ -216,7 +244,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === "initiateAuthentication") {
-        initiateAuthentication();
+        handleAuthentication();
 
         sendResponse({ message: 'User authentication initiated' });
 
@@ -227,6 +255,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.get("access_token", (data) => {
             sendResponse({ access_token: data.access_token || null });
         });
+        return true;
+    }
+
+    if (message.action === "fetchHtml") {
+        (async () => {
+            try {
+                const messageData = message.data;
+                console.log('Received data for HTML generation:', messageData);
+                
+                const data = await Backend.fetchHtml(messageData);
+                console.log('HTML generation response:', data);
+                sendResponse(data);
+            } catch (error) {
+                console.error('Error fetching HTML:', error);
+                sendResponse({ error: 'Failed to fetch HTML' });
+            }
+        })();
         return true;
     }
 });
@@ -278,6 +323,19 @@ function injectRelayScript(tabId) {
                     if (event.data.action === 'initiateFactfulAuthentication') {
                         console.log('[Authenticator] Authentication initiation request received.');
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
+                    } else if (event.data.action === 'generateHtml') {
+                        console.log('[Authenticator] Fetch HTML initiation request received.');
+                        console.log('Message data:', event.data.data);
+                        
+                        chrome.runtime.sendMessage(chrome.runtime.id, {
+                            action: 'fetchHtml',
+                            data: event.data.data
+                        }, response => {
+                            window.postMessage({
+                                action: 'htmlResponse',
+                                result: response
+                            }, '*');
+                        });
                     }
                 });
                     

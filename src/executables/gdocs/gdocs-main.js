@@ -256,7 +256,7 @@ export function initializeGDocsTracker() {
 
     function attachListeners(doc) {
       doc.addEventListener("keydown", e => {
-        if (e.key === "/" || e.keyCode === 191) {
+        if ((e.key === "/" || e.keyCode === 191) && !e.shiftKey) {
           const cursor = document.querySelector(".kix-cursor") || document.querySelector(".docs-text-ui-cursor-blink");
           if (!cursor) return;
           const rect = cursor.getBoundingClientRect();
