@@ -319,10 +319,7 @@ export class Pill {
     }
     
     handleAuthClick() {
-        
-    
         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' }, (response) => {
-            
         });
     }
 

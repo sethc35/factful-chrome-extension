@@ -274,7 +274,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 
                 sendResponse(data);
             } catch (error) {
-                
+                console.error('Error fetching HTML:', error);
                 sendResponse({ error: 'Failed to fetch HTML' });
             }
         })();
@@ -372,7 +372,7 @@ function relayData(data, tabId) {
             if (window.relayData) {
                 window.relayData(data);
             } else {
-                
+                console.error('[Authenticator] relayData is not defined.');
             }
         },
         args: [data],
@@ -546,7 +546,7 @@ async function handleAuthentication() {
                         };
                     }
                 } catch (error) {
-                    
+                    console.error('Authentication error:', error);
                     chrome.tabs.onUpdated.removeListener(handleAuthComplete);
                     throw error;
                 }
