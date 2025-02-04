@@ -202,8 +202,7 @@ export class SlashCommand {
         const option = this.createSlashCommandOption(cmd, details.description);
         this.slashCommandUI.appendChild(option);
       });
-  
-      // Update UI visibility and position
+
       if (filteredCommands.length > 0 && rect) {
         this.selectedIndex = 0;
         this.slashCommandUI.style.display = "block";
@@ -1095,8 +1094,7 @@ export class SlashCommand {
               if (!response.ok) {
                   throw new Error(`Search failed: ${response.error || response.status}`);
               }
-      
-              // Create popup with search results
+
               if (response.data && response.data.final_result) {
                   const badge = document.querySelector(".command-badge-overlay");
                   const popdown = document.createElement("div");
@@ -1134,8 +1132,7 @@ export class SlashCommand {
                           wordBreak: "break-word",
                           lineHeight: "1.5"
                       });
-      
-                      // Use the final_result from the response
+
                       button.textContent = response.data.final_result;
       
                       button.addEventListener("mouseover", () => {
