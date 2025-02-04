@@ -46,6 +46,10 @@ export class SlashCommand {
       this.slashCommandUI.style.overflowY = "auto"
       this.slashCommandUI.style.minWidth = "200px"
       this.slashCommandUI.style.pointerEvents = "auto"
+      this.slashCommandUI.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif";
+      this.slashCommandUI.style.fontSize = "14px";
+      this.slashCommandUI.style.minWidth = "240px";
+      this.slashCommandUI.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
       
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
@@ -75,15 +79,48 @@ export class SlashCommand {
 
       document.addEventListener("keydown", event => {
         if (this.isActive) {
-          if (event.key === "ArrowUp") {
-            this.updateSelectedIndex(-1)
-            event.preventDefault()
-          } else if (event.key === "ArrowDown") {
-            this.updateSelectedIndex(1)
-            event.preventDefault()
+          let handled = false;
+          const cursor = document.querySelector(".kix-cursor");
+          const rect = cursor?.getBoundingClientRect();
+  
+          switch (event.key) {
+            case "ArrowUp":
+              this.updateSelectedIndex(-1);
+              handled = true;
+              break;
+            case "ArrowDown":
+              this.updateSelectedIndex(1);
+              handled = true;
+              break;
+            case "Enter":
+              if (this.slashCommandUI.children.length > 0) {
+                const cmd = this.slashCommandUI.children[this.selectedIndex]
+                  .querySelector("span:first-child").textContent;
+                this.selectCommand(cmd);
+                handled = true;
+              }
+              break;
+            case "Backspace":
+              if (this.currentInput.length > 1) {
+                this.currentInput = this.currentInput.slice(0, -1);
+                this.showSlashCommands(rect, this.currentInput);
+                handled = true;
+              }
+              break;
+            default:
+              if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                this.currentInput += event.key;
+                this.showSlashCommands(rect, this.currentInput);
+                handled = true;
+              }
+          }
+  
+          if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
           }
         }
-      })
+      });
     }
 
     waitForLoad(element) {
@@ -147,25 +184,33 @@ export class SlashCommand {
     }
   
     showSlashCommands(rect, filterText = "") {
+      // Clear existing options
       while (this.slashCommandUI.firstChild) {
-        this.slashCommandUI.removeChild(this.slashCommandUI.firstChild)
+        this.slashCommandUI.removeChild(this.slashCommandUI.firstChild);
       }
-      const filteredCommands = Object.entries(
-        this.slashCommands
-      ).filter(([cmd]) =>
-        cmd.toLowerCase().includes((filterText || "").toLowerCase())
-      )
+  
+      // Filter and sort commands
+      const filteredCommands = Object.entries(this.slashCommands)
+        .filter(([cmd]) => cmd.toLowerCase().startsWith(filterText.toLowerCase()))
+        .sort((a, b) => a[0].localeCompare(b[0]));
+  
+      // Create new options
       filteredCommands.forEach(([cmd, details]) => {
-        const option = this.createSlashCommandOption(cmd, details.description)
-        this.slashCommandUI.appendChild(option)
-      })
-      if (filteredCommands.length > 0) {
-        this.slashCommandUI.style.position = "fixed"
-        this.slashCommandUI.style.display = "block"
-        this.slashCommandUI.style.left = `${rect.left}px`
-        this.slashCommandUI.style.top = `${rect.bottom + 5}px`
+        const option = this.createSlashCommandOption(cmd, details.description);
+        this.slashCommandUI.appendChild(option);
+      });
+  
+      // Update UI visibility and position
+      if (filteredCommands.length > 0 && rect) {
+        this.selectedIndex = 0;
+        this.slashCommandUI.style.display = "block";
+        this.slashCommandUI.style.left = `${rect.left}px`;
+        this.slashCommandUI.style.top = `${rect.bottom + 5}px`;
+        Array.from(this.slashCommandUI.children).forEach((option, index) => {
+          option.style.backgroundColor = index === this.selectedIndex ? "#f3f4f6" : "transparent";
+        });
       } else {
-        this.slashCommandUI.style.display = "none"
+        this.slashCommandUI.style.display = "none";
       }
     }
   

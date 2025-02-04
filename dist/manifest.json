@@ -8,6 +8,9 @@
       "activeTab",
       "tabs"
     ],
+    "host_permissions": [
+      "*://docs.google.com/document/*"
+    ],
     "background": {
       "service_worker": "backend.js",
       "type": "module"

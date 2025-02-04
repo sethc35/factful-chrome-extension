@@ -256,13 +256,15 @@ export function initializeGDocsTracker() {
 
     function attachListeners(doc) {
       doc.addEventListener("keydown", e => {
-        if ((e.key === "/" || e.keyCode === 191) && !e.shiftKey) {
-          const cursor = document.querySelector(".kix-cursor") || document.querySelector(".docs-text-ui-cursor-blink");
+        if (e.key === "/" && !e.shiftKey && !slashCommand.isActive) {
+          const cursor = document.querySelector(".kix-cursor");
           if (!cursor) return;
-          const rect = cursor.getBoundingClientRect();
+          
           slashCommand.isActive = true;
           slashCommand.currentInput = "/";
+          const rect = cursor.getBoundingClientRect();
           slashCommand.showSlashCommands(rect, "/");
+          e.preventDefault();
         }
       }, true);
 
