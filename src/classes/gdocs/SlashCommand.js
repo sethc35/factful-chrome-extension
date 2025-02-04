@@ -1062,7 +1062,6 @@ export class SlashCommand {
             return null
           }
         } else if (command === "/search") {
-          console.log('search fired');
           try {
             let response;
             window.postMessage({ 
@@ -1081,10 +1080,8 @@ export class SlashCommand {
                 }
                 window.addEventListener('message', handleMessage);
             });
-            console.log('response promise: ', responsePromise);
             response = await responsePromise;
 
-            console.log('response from search: ', response);
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`)
             }
@@ -1150,13 +1147,11 @@ export class SlashCommand {
               })
             }
           } catch (error) {
-            console.log('error searching: ', error);
             return null
           }
         }
         return null
       } catch (error) {
-        console.log('error: ', error);
         return null
       }
     }

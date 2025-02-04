@@ -8,18 +8,16 @@ Backend.fetchData = async function(textInput) {
         const settings = await returnSettings();
         const accessToken = await getAccessToken();
         const url = `https://backend.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`
-        console.log(query, settings, accessToken, url);
 
         const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                "Authorization": `Bearer ${accessToken}`
             }
         });
 
                 if (!response.ok) {
-                    console.log('response from process text: ', response);
                     if (response.status === 401) {
                         return { error: "Unauthorized" }
                     }
@@ -37,7 +35,7 @@ Backend.fetchData = async function(textInput) {
     }
 }
 
-Backend.sendCommand = async function(command, parameter, useSearch = false, context = '') {
+Backend.sendCommand = async function(command, parameter, useSearch = false, context) {
     const accessToken = await getAccessToken();
     const settings = await returnSettings();
     if (!accessToken) {
@@ -49,6 +47,8 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
         let endpoint;
         let isSearch = false;
         let isGenerate = false;
+        
+        
         
         switch (command) {
             case '/synonym':
@@ -147,13 +147,12 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
                 ? `https://backend.factful.io/${endpoint}?query=${query}`
                 : `https://backend.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
     
-        const accessToken = await getAccessToken();
+        
 
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'Content-Type': 'application/json'
             }
         });
 
@@ -335,6 +334,9 @@ function injectRelayScript(tabId) {
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
 
                     } else if (event.data.action === 'generateHtml') {
+                        
+                        
+
                         const { data, useSearch } = event.data;
 
                         chrome.runtime.sendMessage(chrome.runtime.id, {
@@ -344,18 +346,6 @@ function injectRelayScript(tabId) {
                         }, response => {
                             window.postMessage({
                                 action: 'htmlResponse',
-                                result: response
-                            }, '*');
-                        });
-                    } else if (event.data.action === 'smartSearch') {
-                        chrome.runtime.sendMessage(chrome.runtime.id, {
-                            action: 'sendCommand',
-                            command: event.data.command,
-                            parameter: event.data.parameter,
-                            context: event.data.context
-                        }, response => {
-                            window.postMessage({
-                                action: 'searchResponse',
                                 result: response
                             }, '*');
                         });

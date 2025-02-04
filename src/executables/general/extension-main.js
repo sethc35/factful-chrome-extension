@@ -80,7 +80,6 @@ async function initializeExtension() {
       action: 'fetchData',
       textInput: text
     }).then(response => {
-      console.log('response from fetch backend: ', response);
       if (response.error) {
         return;
       }

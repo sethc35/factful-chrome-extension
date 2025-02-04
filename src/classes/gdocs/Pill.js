@@ -379,7 +379,6 @@
     }
 
     handleAuthClick() {
-        console.log('auth button clicked')
         window.postMessage({ action: 'initiateFactfulAuthentication' }, '*');
     }
 
