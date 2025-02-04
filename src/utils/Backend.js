@@ -1,6 +1,11 @@
 /* eslint-disable */
 
 var Backend = Backend || {};
+const DEFAULT_SETTINGS = {
+    outputType: 'detailed',
+    language: 'en-US',
+    disabledDomains: []
+};
 
 Backend.fetchData = async function(textInput) {
     try {
@@ -13,17 +18,17 @@ Backend.fetchData = async function(textInput) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                "Authorization": `Bearer ${accessToken}`
+                'Authorization': `Bearer ${accessToken}`
             }
         });
 
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        return { error: "Unauthorized" }
-                    }
+        if (!response.ok) {
+            if (response.status === 401) {
+                return { error: "Unauthorized" }
+            }
 
-                    throw new Error(`[APIService] HTTP error! Status: ${response.status}`);
-                }
+            throw new Error(`[APIService] HTTP error! Status: ${response.status}`);
+        }
 
         const data = await response.json();
         
@@ -35,7 +40,7 @@ Backend.fetchData = async function(textInput) {
     }
 }
 
-Backend.sendCommand = async function(command, parameter, useSearch = false, context) {
+Backend.sendCommand = async function(command, parameter, useSearch = false, context = '') {
     const accessToken = await getAccessToken();
     const settings = await returnSettings();
     if (!accessToken) {
@@ -47,8 +52,6 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
         let endpoint;
         let isSearch = false;
         let isGenerate = false;
-        
-        
         
         switch (command) {
             case '/synonym':
@@ -85,11 +88,10 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
             }
         });
-
-        
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -146,13 +148,12 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
             : isSearch
                 ? `https://backend.factful.io/${endpoint}?query=${query}`
                 : `https://backend.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
-    
-        
 
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
             }
         });
 
@@ -334,9 +335,6 @@ function injectRelayScript(tabId) {
                         chrome.runtime.sendMessage(chrome.runtime.id, { action: 'initiateAuthentication' });
 
                     } else if (event.data.action === 'generateHtml') {
-                        
-                        
-
                         const { data, useSearch } = event.data;
 
                         chrome.runtime.sendMessage(chrome.runtime.id, {
@@ -349,6 +347,77 @@ function injectRelayScript(tabId) {
                                 result: response
                             }, '*');
                         });
+                    } else if (event.data.action === 'sendCommand' && event.data.command === '/search') {
+                        try {
+                            chrome.runtime.sendMessage({ action: 'getAccessToken' }, async (response) => {
+                                const accessToken = response.access_token;
+                                
+                                const query = encodeURIComponent(event.data.parameter);
+                                const url = `https://backend.factful.io/smart-search?query=${query}`;
+                                
+                                const apiResponse = await fetch(url, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${accessToken}`
+                                    }
+                                });
+
+                                const data = await apiResponse.json();
+                                
+                                window.postMessage({
+                                    action: 'searchResponse',
+                                    result: {
+                                        ok: apiResponse.ok,
+                                        status: apiResponse.status,
+                                        data: data
+                                    }
+                                }, '*');
+                            });
+                        } catch (error) {
+                            window.postMessage({
+                                action: 'searchResponse',
+                                result: { 
+                                    ok: false, 
+                                    error: error.message 
+                                }
+                            }, '*');
+                        }
+                    } else if (event.data.action === 'sendCommand' && event.data.command === '/generate') {
+                        try {
+                            chrome.runtime.sendMessage({ action: 'getAccessToken' }, async (response) => {
+                                const accessToken = response.access_token;
+                                const query = encodeURIComponent(event.data.parameter);
+                                const url = `https://backend.factful.io/generate-text?prompt=${query}`;
+                                
+                                const apiResponse = await fetch(url, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${accessToken}`
+                                    }
+                                });
+                    
+                                const data = await apiResponse.json();
+                                
+                                window.postMessage({
+                                    action: 'generateResponse',
+                                    result: {
+                                        ok: apiResponse.ok,
+                                        status: apiResponse.status,
+                                        data: data
+                                    }
+                                }, '*');
+                            });
+                        } catch (error) {
+                            window.postMessage({
+                                action: 'generateResponse',
+                                result: { 
+                                    ok: false, 
+                                    error: error.message 
+                                }
+                            }, '*');
+                        }
                     }
                 });
 
@@ -383,9 +452,7 @@ function relayData(data, tabId) {
     });
 }
 
-function validateAccessTokenForGoogleDocs(tabId) {
-    
-        
+function validateAccessTokenForGoogleDocs(tabId) {    
     chrome.storage.local.get("access_token", async (data) => {
         const accessToken = data.access_token;
 
@@ -424,9 +491,7 @@ function validateAccessTokenForGoogleDocs(tabId) {
     });
 }
 
-function validateAccessToken(tabId) {
-    
-        
+function validateAccessToken(tabId) {    
     chrome.storage.local.get("access_token", async (data) => {
         const accessToken = data.access_token;
 
@@ -531,6 +596,8 @@ async function handleAuthentication() {
                             auth_url: newUrl
                         });
 
+                        await chrome.storage.sync.set(DEFAULT_SETTINGS);
+
                         await chrome.tabs.remove(authTab.id);
 
                         if (originalTabId) {
@@ -550,7 +617,6 @@ async function handleAuthentication() {
                         };
                     }
                 } catch (error) {
-                    
                     chrome.tabs.onUpdated.removeListener(handleAuthComplete);
                     throw error;
                 }
@@ -562,9 +628,8 @@ async function handleAuthentication() {
 
     setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(handleAuthComplete);
-    }, 300000); // Auth expires after 5 min
+    }, 300000); // 5 min
 }
-
 
 chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install') {
