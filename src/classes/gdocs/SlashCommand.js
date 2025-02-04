@@ -184,17 +184,14 @@ export class SlashCommand {
     }
   
     showSlashCommands(rect, filterText = "") {
-      // Clear existing options
       while (this.slashCommandUI.firstChild) {
         this.slashCommandUI.removeChild(this.slashCommandUI.firstChild);
       }
-  
-      // Filter and sort commands
+
       const filteredCommands = Object.entries(this.slashCommands)
         .filter(([cmd]) => cmd.toLowerCase().startsWith(filterText.toLowerCase()))
         .sort((a, b) => a[0].localeCompare(b[0]));
-  
-      // Create new options
+
       filteredCommands.forEach(([cmd, details]) => {
         const option = this.createSlashCommandOption(cmd, details.description);
         this.slashCommandUI.appendChild(option);
@@ -438,6 +435,27 @@ export class SlashCommand {
           }
         })
         parameterPart.addEventListener("keydown", async e => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            badge.remove();
+            const contentDiv = document.querySelector('.docs-texteventtarget-iframe')
+                ?.contentDocument?.querySelector('div[aria-label="Document content"]');
+            if (contentDiv) {
+                contentDiv.focus();
+            }
+            return;
+          }
+          
+          if (e.key === "Backspace" && parameterPart.textContent.trim() === "") {
+              e.preventDefault();
+              badge.remove();
+              const contentDiv = document.querySelector('.docs-texteventtarget-iframe')
+                  ?.contentDocument?.querySelector('div[aria-label="Document content"]');
+              if (contentDiv) {
+                  contentDiv.focus();
+              }
+              return;
+          }
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault()
             const parameter = parameterPart.textContent.trim()
@@ -1044,18 +1062,29 @@ export class SlashCommand {
             return null
           }
         } else if (command === "/search") {
+          console.log('search fired');
           try {
-            const response = await fetch(
-              `https://backend.factful.io/quick_search/${encodeURIComponent(
-                parameter
-              )}`,
-              {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json"
+            let response;
+            window.postMessage({ 
+                action: 'smartSearch',
+                command: '/search',
+                parameter: parameter,
+                context: context
+            }, '*');
+
+            const responsePromise = new Promise((resolve) => {
+                function handleMessage(event) {
+                    if (event.data.action === 'searchResponse') {
+                        window.removeEventListener('message', handleMessage);
+                        resolve(event.data.result);
+                    }
                 }
-              }
-            )
+                window.addEventListener('message', handleMessage);
+            });
+            console.log('response promise: ', responsePromise);
+            response = await responsePromise;
+
+            console.log('response from search: ', response);
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`)
             }
@@ -1121,11 +1150,13 @@ export class SlashCommand {
               })
             }
           } catch (error) {
+            console.log('error searching: ', error);
             return null
           }
         }
         return null
       } catch (error) {
+        console.log('error: ', error);
         return null
       }
     }

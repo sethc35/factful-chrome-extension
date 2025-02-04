@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 
+import { ChatWindow } from '../../classes/general/ChatWindow.js'
 import { Pill } from '../../classes/general/Pill.js'
 import { SlashCommand } from '../../classes/general/SlashCommand.js'
 import { Tooltip } from '../../classes/general/Tooltip.js'
@@ -13,9 +14,18 @@ async function initializeExtension() {
   let tooltipHideTimeout = null
   let isTyping = false
   let typeTimeout = null
-  const underline = new Underline()
-  const tooltip = new Tooltip()
-  const slashCommand = new SlashCommand()
+  const underline = new Underline();
+  const tooltip = new Tooltip();
+  const slashCommand = new SlashCommand();
+  const chatWindow = new ChatWindow();
+  chatWindow.onVisibilityChange = (isVisible) => {
+      if (isVisible) {
+          chatWindow.enableHighlighting();
+      } else {
+          chatWindow.disableHighlighting();
+      }
+  };
+
   let observer = null
   let tooltipVisible = false
   let lastTooltipId = null
@@ -34,7 +44,7 @@ async function initializeExtension() {
       return;
   }
 
-  const pill = new Pill("../assets/factful-icon-transparent.png"); // change to base64 prob
+  const pill = new Pill("../assets/factful-icon-transparent.png", chatWindow);
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'setAccessToken') {
@@ -70,9 +80,8 @@ async function initializeExtension() {
       action: 'fetchData',
       textInput: text
     }).then(response => {
+      console.log('response from fetch backend: ', response);
       if (response.error) {
-        
-
         return;
       }
 

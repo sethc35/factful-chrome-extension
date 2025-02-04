@@ -612,6 +612,14 @@ export class SlashCommand {
                     badge.remove()
                     element.focus()
                 }
+            } else if (e.key === 'Escape') {
+                e.preventDefault()
+                badge.remove()
+                element.focus()
+            } else if (e.key === 'Backspace' && paramSpan.textContent.trim() === '') {
+                e.preventDefault()
+                badge.remove()
+                element.focus()
             }
         })
     

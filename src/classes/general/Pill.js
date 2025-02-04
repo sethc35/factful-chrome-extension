@@ -1,9 +1,8 @@
-import { ChatWindow } from './ChatWindow.js';
 
 export class Pill {
-    constructor(logoUrl) {
+    constructor(logoUrl, chatWindow) {
         this.logoUrl = logoUrl;
-        this.chatWindow = new ChatWindow();
+        this.chatWindow = chatWindow;
         this.activeElement = null;
         this.resizeObserver = null;
         this.isChatWindowOpen = false;
@@ -48,17 +47,6 @@ export class Pill {
             childList: true,
             subtree: true
         });
-
-        this.chatWindow.onVisibilityChange = (isVisible) => {
-            this.isChatWindowOpen = isVisible;
-            if (this.activeElement) {
-                if (isVisible) {
-                    this.chatWindow.enableHighlighting();
-                } else {
-                    this.chatWindow.disableHighlighting();
-                }
-            }
-        };
     }
 
     initializeStructure() {
@@ -189,10 +177,6 @@ export class Pill {
 
         this.overlayContainer.style.display = 'block';
         this.pill.style.display = 'flex';
-    
-        if (this.isChatWindowOpen) {
-            this.chatWindow.enableHighlighting();
-        }
     }
 
     updatePosition() {
@@ -219,10 +203,6 @@ export class Pill {
         
         this.overlayContainer.style.display = 'none';
         this.activeElement = null;
-        
-        if (this.chatWindow) {
-            this.chatWindow.disableHighlighting();
-        }
     }
 
     isTextInput(element) {
@@ -370,6 +350,5 @@ export class Pill {
         }
         
         this.overlayContainer.remove();
-        this.chatWindow.hide();
     }
 }

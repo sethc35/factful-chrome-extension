@@ -255,16 +255,108 @@ export function initializeGDocsTracker() {
     }
 
     function attachListeners(doc) {
-      doc.addEventListener("keydown", e => {
+      doc.addEventListener("keydown", async e => {
         if (e.key === "/" && !e.shiftKey && !slashCommand.isActive) {
           const cursor = document.querySelector(".kix-cursor");
           if (!cursor) return;
-          
-          slashCommand.isActive = true;
-          slashCommand.currentInput = "/";
-          const rect = cursor.getBoundingClientRect();
-          slashCommand.showSlashCommands(rect, "/");
-          e.preventDefault();
+
+          const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
+          const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
+
+          let isValidSlashPosition = false;
+
+          const clipboardData = new DataTransfer();
+          contentDiv.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowLeft',
+            code: 'ArrowLeft',
+            keyCode: 37,
+            which: 37,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true
+          }));
+
+          contentDiv.dispatchEvent(new ClipboardEvent('copy', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData
+          }));
+      
+          const precedingChar = clipboardData.getData('text/plain');
+
+          contentDiv.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowRight',
+            code: 'ArrowRight',
+            keyCode: 39,
+            which: 39,
+            bubbles: true,
+            cancelable: true
+          }));
+
+          isValidSlashPosition = precedingChar === '' ||
+                                precedingChar === ' ' ||
+                                precedingChar === '\n' ||
+                                precedingChar === '\r' ||
+                                precedingChar === '\u200B';
+      
+          if (isValidSlashPosition) {
+            slashCommand.isActive = true;
+            slashCommand.currentInput = "/";
+            const rect = cursor.getBoundingClientRect();
+            slashCommand.showSlashCommands(rect, "/");
+            e.preventDefault();
+            return;
+          }
+        }
+
+        if (slashCommand.isActive) {
+          let handled = false;
+          const cursor = document.querySelector(".kix-cursor");
+          const rect = cursor?.getBoundingClientRect();
+      
+          switch (e.key) {
+            case "ArrowUp":
+              slashCommand.updateSelectedIndex(-1);
+              handled = true;
+              break;
+            case "ArrowDown":
+              slashCommand.updateSelectedIndex(1);
+              handled = true;
+              break;
+            case "Enter":
+              if (slashCommand.slashCommandUI.children.length > 0) {
+                const cmd = slashCommand.slashCommandUI.children[slashCommand.selectedIndex]
+                  .querySelector("span:first-child").textContent;
+                slashCommand.selectCommand(cmd);
+                handled = true;
+              }
+              break;
+            case "Backspace":
+              if (slashCommand.currentInput.length > 1) {
+                slashCommand.currentInput = slashCommand.currentInput.slice(0, -1);
+                slashCommand.showSlashCommands(rect, slashCommand.currentInput);
+                handled = true;
+              } else if (slashCommand.currentInput.length === 1) {
+                slashCommand.hideSlashCommandUI();
+                handled = true;
+              }
+              break;
+            case "Escape":
+              slashCommand.hideSlashCommandUI();
+              handled = true;
+              break;
+            default:
+              if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                slashCommand.currentInput += e.key;
+                slashCommand.showSlashCommands(rect, slashCommand.currentInput);
+                handled = true;
+              }
+          }
+      
+          if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
         }
       }, true);
 
