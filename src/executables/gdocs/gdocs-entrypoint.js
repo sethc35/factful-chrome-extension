@@ -1,7 +1,5 @@
 import { initializeGDocsTracker } from './gdocs-main.js';
 
-
-
 const canRun = localStorage.getItem('canFactfulRun') !== 'false';
 if (canRun) {
     
@@ -11,6 +9,4 @@ if (canRun) {
         });
     }
     initializeGDocsTracker();
-} else {
-    
 }
