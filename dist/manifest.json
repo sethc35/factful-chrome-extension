@@ -1,12 +1,15 @@
 {
     "name": "Factful: Integrated AI Writing Assistant and Environment",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "manifest_version": 3,
     "permissions": [
       "storage",
       "scripting",
       "activeTab",
       "tabs"
+    ],
+    "host_permissions": [
+      "*://docs.google.com/document/*"
     ],
     "background": {
       "service_worker": "backend.js",

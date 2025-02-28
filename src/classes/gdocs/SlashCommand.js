@@ -31,6 +31,12 @@ export class SlashCommand {
           parameters: [
             { name: "word", type: "text", description: "Query to search" }
           ]
+        },
+        "/generate": {
+          description: "Get a search for a question",
+          parameters: [
+            { name: "word", type: "text", description: "Prompt to generate with" }
+          ]
         }
       }
       this.slashCommandUI = document.createElement("div")
@@ -46,6 +52,10 @@ export class SlashCommand {
       this.slashCommandUI.style.overflowY = "auto"
       this.slashCommandUI.style.minWidth = "200px"
       this.slashCommandUI.style.pointerEvents = "auto"
+      this.slashCommandUI.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif";
+      this.slashCommandUI.style.fontSize = "14px";
+      this.slashCommandUI.style.minWidth = "240px";
+      this.slashCommandUI.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
       
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
@@ -75,15 +85,48 @@ export class SlashCommand {
 
       document.addEventListener("keydown", event => {
         if (this.isActive) {
-          if (event.key === "ArrowUp") {
-            this.updateSelectedIndex(-1)
-            event.preventDefault()
-          } else if (event.key === "ArrowDown") {
-            this.updateSelectedIndex(1)
-            event.preventDefault()
+          let handled = false;
+          const cursor = document.querySelector(".kix-cursor");
+          const rect = cursor?.getBoundingClientRect();
+  
+          switch (event.key) {
+            case "ArrowUp":
+              this.updateSelectedIndex(-1);
+              handled = true;
+              break;
+            case "ArrowDown":
+              this.updateSelectedIndex(1);
+              handled = true;
+              break;
+            case "Enter":
+              if (this.slashCommandUI.children.length > 0) {
+                const cmd = this.slashCommandUI.children[this.selectedIndex]
+                  .querySelector("span:first-child").textContent;
+                this.selectCommand(cmd);
+                handled = true;
+              }
+              break;
+            case "Backspace":
+              if (this.currentInput.length > 1) {
+                this.currentInput = this.currentInput.slice(0, -1);
+                this.showSlashCommands(rect, this.currentInput);
+                handled = true;
+              }
+              break;
+            default:
+              if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                this.currentInput += event.key;
+                this.showSlashCommands(rect, this.currentInput);
+                handled = true;
+              }
+          }
+  
+          if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
           }
         }
-      })
+      });
     }
 
     waitForLoad(element) {
@@ -148,24 +191,28 @@ export class SlashCommand {
   
     showSlashCommands(rect, filterText = "") {
       while (this.slashCommandUI.firstChild) {
-        this.slashCommandUI.removeChild(this.slashCommandUI.firstChild)
+        this.slashCommandUI.removeChild(this.slashCommandUI.firstChild);
       }
-      const filteredCommands = Object.entries(
-        this.slashCommands
-      ).filter(([cmd]) =>
-        cmd.toLowerCase().includes((filterText || "").toLowerCase())
-      )
+
+      const filteredCommands = Object.entries(this.slashCommands)
+        .filter(([cmd]) => cmd.toLowerCase().startsWith(filterText.toLowerCase()))
+        .sort((a, b) => a[0].localeCompare(b[0]));
+
       filteredCommands.forEach(([cmd, details]) => {
-        const option = this.createSlashCommandOption(cmd, details.description)
-        this.slashCommandUI.appendChild(option)
-      })
-      if (filteredCommands.length > 0) {
-        this.slashCommandUI.style.position = "fixed"
-        this.slashCommandUI.style.display = "block"
-        this.slashCommandUI.style.left = `${rect.left}px`
-        this.slashCommandUI.style.top = `${rect.bottom + 5}px`
+        const option = this.createSlashCommandOption(cmd, details.description);
+        this.slashCommandUI.appendChild(option);
+      });
+
+      if (filteredCommands.length > 0 && rect) {
+        this.selectedIndex = 0;
+        this.slashCommandUI.style.display = "block";
+        this.slashCommandUI.style.left = `${rect.left}px`;
+        this.slashCommandUI.style.top = `${rect.bottom + 5}px`;
+        Array.from(this.slashCommandUI.children).forEach((option, index) => {
+          option.style.backgroundColor = index === this.selectedIndex ? "#f3f4f6" : "transparent";
+        });
       } else {
-        this.slashCommandUI.style.display = "none"
+        this.slashCommandUI.style.display = "none";
       }
     }
   
@@ -393,6 +440,27 @@ export class SlashCommand {
           }
         })
         parameterPart.addEventListener("keydown", async e => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            badge.remove();
+            const contentDiv = document.querySelector('.docs-texteventtarget-iframe')
+                ?.contentDocument?.querySelector('div[aria-label="Document content"]');
+            if (contentDiv) {
+                contentDiv.focus();
+            }
+            return;
+          }
+          
+          if (e.key === "Backspace" && parameterPart.textContent.trim() === "") {
+              e.preventDefault();
+              badge.remove();
+              const contentDiv = document.querySelector('.docs-texteventtarget-iframe')
+                  ?.contentDocument?.querySelector('div[aria-label="Document content"]');
+              if (contentDiv) {
+                  contentDiv.focus();
+              }
+              return;
+          }
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault()
             const parameter = parameterPart.textContent.trim()
@@ -1000,89 +1068,201 @@ export class SlashCommand {
           }
         } else if (command === "/search") {
           try {
-            const response = await fetch(
-              `https://backend.factful.io/quick_search/${encodeURIComponent(
-                parameter
-              )}`,
-              {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json"
-                }
-              }
-            )
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`)
-            }
-            const data = await response.json()
-            if (data.output) {
-              const badge = document.querySelector(".command-badge-overlay")
-              const popdown = document.createElement("div")
-              Object.assign(popdown.style, {
-                position: "absolute",
-                left: `${badge.getBoundingClientRect().right}px`,
-                top: `${badge.getBoundingClientRect().bottom + 5}px`,
-                backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                boxShadow:
-                  "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
-                padding: "8px",
-                zIndex: "1000000",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                border: "1px solid #e0e0e0",
-                maxWidth: "400px"
-              })
-              return new Promise(resolve => {
-                const button = document.createElement("button")
-                Object.assign(button.style, {
-                  padding: "8px 12px",
-                  border: "none",
-                  borderRadius: "4px",
-                  backgroundColor: "#f3f4f6",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  width: "100%",
-                  color: "#374151",
-                  fontFamily: "'Google Sans', Roboto, Arial, sans-serif",
-                  fontSize: "14px",
-                  transition: "background-color 0.2s",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  lineHeight: "1.5"
-                })
-                button.textContent = data.output
-                button.addEventListener("mouseover", () => {
-                  button.style.backgroundColor = "#e5e7eb"
-                })
-                button.addEventListener("mouseout", () => {
-                  button.style.backgroundColor = "#f3f4f6"
-                })
-                button.addEventListener("click", () => {
-                  popdown.remove()
-                  resolve(data.output)
-                })
-                popdown.appendChild(button)
-                this.waitForLoad(popdown)
-                const handleClickOutside = e => {
-                  if (!popdown.contains(e.target)) {
-                    popdown.remove()
-                    document.removeEventListener("mousedown", handleClickOutside)
-                    resolve(null)
+              const responsePromise = new Promise((resolve, reject) => {
+                  const timeout = setTimeout(() => {
+                      reject(new Error('Search timeout'));
+                  }, 30000);
+      
+                  function handleMessage(event) {
+                      if (event.data.action === 'searchResponse') {
+                          clearTimeout(timeout);
+                          window.removeEventListener('message', handleMessage);
+                          resolve(event.data.result);
+                      }
                   }
-                }
-                document.addEventListener("mousedown", handleClickOutside)
-              })
-            }
+                  window.addEventListener('message', handleMessage);
+      
+                  window.postMessage({ 
+                      action: 'sendCommand',
+                      command: '/search',
+                      parameter: parameter,
+                  }, '*');
+              });
+      
+              const response = await responsePromise;
+      
+              if (!response.ok) {
+                  throw new Error(`Search failed: ${response.error || response.status}`);
+              }
+
+              if (response.data && response.data.final_result) {
+                  const badge = document.querySelector(".command-badge-overlay");
+                  const popdown = document.createElement("div");
+                  Object.assign(popdown.style, {
+                      position: "absolute",
+                      left: `${badge.getBoundingClientRect().right}px`,
+                      top: `${badge.getBoundingClientRect().bottom + 5}px`,
+                      backgroundColor: "#ffffff",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
+                      padding: "8px",
+                      zIndex: "1000000",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      border: "1px solid #e0e0e0",
+                      maxWidth: "400px"
+                  });
+      
+                  return new Promise(resolve => {
+                      const button = document.createElement("button");
+                      Object.assign(button.style, {
+                          padding: "8px 12px",
+                          border: "none",
+                          borderRadius: "4px",
+                          backgroundColor: "#f3f4f6",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          width: "100%",
+                          color: "#374151",
+                          fontFamily: "'Google Sans', Roboto, Arial, sans-serif",
+                          fontSize: "14px",
+                          transition: "background-color 0.2s",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          lineHeight: "1.5"
+                      });
+
+                      button.textContent = response.data.final_result;
+      
+                      button.addEventListener("mouseover", () => {
+                          button.style.backgroundColor = "#e5e7eb";
+                      });
+                      button.addEventListener("mouseout", () => {
+                          button.style.backgroundColor = "#f3f4f6";
+                      });
+                      button.addEventListener("click", () => {
+                          popdown.remove();
+                          resolve(response.data.final_result);
+                      });
+      
+                      popdown.appendChild(button);
+                      this.waitForLoad(popdown);
+      
+                      const handleClickOutside = e => {
+                          if (!popdown.contains(e.target)) {
+                              popdown.remove();
+                              document.removeEventListener("mousedown", handleClickOutside);
+                              resolve(null);
+                          }
+                      };
+                      document.addEventListener("mousedown", handleClickOutside);
+                  });
+              }
           } catch (error) {
-            return null
+              return null;
+          }
+        } else if (command === "/generate") {
+          try {
+              const responsePromise = new Promise((resolve, reject) => {
+                  const timeout = setTimeout(() => {
+                      reject(new Error('Generate timeout'));
+                  }, 30000);
+      
+                  function handleMessage(event) {
+                      if (event.data.action === 'generateResponse') {
+                          clearTimeout(timeout);
+                          window.removeEventListener('message', handleMessage);
+                          resolve(event.data.result);
+                      }
+                  }
+                  window.addEventListener('message', handleMessage);
+      
+                  window.postMessage({ 
+                      action: 'sendCommand',
+                      command: '/generate',
+                      parameter: parameter,
+                  }, '*');
+              });
+      
+              const response = await responsePromise;
+      
+              if (!response.ok) {
+                  throw new Error(`Generate failed: ${response.error || response.status}`);
+              }
+      
+              if (response.data && response.data.generated_text) {
+                  const badge = document.querySelector(".command-badge-overlay");
+                  const popdown = document.createElement("div");
+                  Object.assign(popdown.style, {
+                      position: "absolute",
+                      left: `${badge.getBoundingClientRect().right}px`,
+                      top: `${badge.getBoundingClientRect().bottom + 5}px`,
+                      backgroundColor: "#ffffff",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
+                      padding: "8px",
+                      zIndex: "1000000",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      border: "1px solid #e0e0e0",
+                      maxWidth: "400px"
+                  });
+      
+                  return new Promise(resolve => {
+                      const button = document.createElement("button");
+                      Object.assign(button.style, {
+                          padding: "8px 12px",
+                          border: "none",
+                          borderRadius: "4px",
+                          backgroundColor: "#f3f4f6",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          width: "100%",
+                          color: "#374151",
+                          fontFamily: "'Google Sans', Roboto, Arial, sans-serif",
+                          fontSize: "14px",
+                          transition: "background-color 0.2s",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          lineHeight: "1.5"
+                      });
+      
+                      button.textContent = response.data.generated_text;
+      
+                      button.addEventListener("mouseover", () => {
+                          button.style.backgroundColor = "#e5e7eb";
+                      });
+                      button.addEventListener("mouseout", () => {
+                          button.style.backgroundColor = "#f3f4f6";
+                      });
+                      button.addEventListener("click", () => {
+                          popdown.remove();
+                          resolve(response.data.generated_text);
+                      });
+      
+                      popdown.appendChild(button);
+                      this.waitForLoad(popdown);
+      
+                      const handleClickOutside = e => {
+                          if (!popdown.contains(e.target)) {
+                              popdown.remove();
+                              document.removeEventListener("mousedown", handleClickOutside);
+                              resolve(null);
+                          }
+                      };
+                      document.addEventListener("mousedown", handleClickOutside);
+                  });
+              }
+          } catch (error) {
+              return null;
           }
         }
-        return null
-      } catch (error) {
-        return null
-      }
+          return null
+        } catch (error) {
+          return null
+        }
     }
   }
   

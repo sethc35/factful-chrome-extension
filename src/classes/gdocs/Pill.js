@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
     export class Pill {
     constructor(numCorrections, corrections, handlers) {
         this.numCorrections = numCorrections;
