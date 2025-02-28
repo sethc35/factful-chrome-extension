@@ -202,8 +202,7 @@ export class SlashCommand {
             if (marker.parentNode) {
                 marker.parentNode.removeChild(marker);
             }
-            
-            // Account for scroll position
+
             const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
             const scrollY = window.pageYOffset || document.documentElement.scrollTop;
             
@@ -680,10 +679,91 @@ export class SlashCommand {
         }, 0);
     
         let isProcessing = false;
-    
-        // Rest of the method remains the same...
+
         itemsArray.forEach(item => {
-            // Existing code for creating buttons...
+            const btn = document.createElement('button');
+            btn.textContent = item;
+            btn.style.padding = '8px 12px';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '4px';
+            btn.style.backgroundColor = '#f3f4f6';
+            btn.style.cursor = 'pointer';
+            btn.style.width = '100%';
+            btn.style.textAlign = 'left';
+            btn.style.color = '#374151';
+            btn.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif";
+            btn.style.fontSize = '14px';
+    
+            btn.addEventListener('mouseover', () => {
+                btn.style.backgroundColor = '#e5e7eb';
+            });
+    
+            btn.addEventListener('mouseout', () => {
+                btn.style.backgroundColor = '#f3f4f6';
+            });
+
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+            });
+    
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (isProcessing) return;
+                isProcessing = true;
+            
+                popdown.remove();
+                document.removeEventListener('mousedown', handleOutside);
+            
+                const element = this.lastFocusedElement || document.activeElement;
+                if (!element) return;
+            
+                requestAnimationFrame(() => {
+                    try {
+                        if (element.isContentEditable) {
+                            const sel = window.getSelection();
+                            let range = null;
+            
+                            if (sel.rangeCount) {
+                                range = sel.getRangeAt(0);
+                            } else if (this.originalRange) {
+                                range = this.originalRange.cloneRange();
+                                sel.addRange(range);
+                            } else {
+                                range = document.createRange();
+                                range.selectNodeContents(element);
+                                range.collapse(false);
+                                sel.addRange(range);
+                            }
+            
+                            const textNode = document.createTextNode(item + ' ');
+                            range.deleteContents();
+                            range.insertNode(textNode);
+            
+                            const newRange = document.createRange();
+                            newRange.setStart(textNode, textNode.length);
+                            newRange.collapse(true);
+                            sel.removeAllRanges();
+                            sel.addRange(newRange);
+                            
+                            this.originalRange = newRange.cloneRange();
+                        } else {
+                            const start = element.selectionStart;
+                            element.setRangeText(item, start, start, 'end');
+                            element.selectionEnd = start + item.length;
+                        }
+            
+                        element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                    } catch (error) {
+                        console.log('error in popdown: ', error)
+                    }
+            
+                    setTimeout(() => {
+                        isProcessing = false;
+                    }, 50);
+                });
+            });     
+    
+            popdown.appendChild(btn);
         });
     
         document.body.appendChild(popdown);

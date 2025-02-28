@@ -56,24 +56,54 @@ export function initializeGDocsTracker() {
         try {
           const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
           const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');
-
+      
           const matchingUnderline = underline.underlineElements.find(el => 
             el.originalText === correction.originalText && 
             el.error_type === correction.error_type
           );
-
+      
           if (!matchingUnderline) {
-            
             return;
           }
 
           const line = matchingUnderline.groupElement.querySelector('line');
           const svgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
-          const x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
-          const x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
-          const y = svgRect.top + parseFloat(line.getAttribute('y1'));
+          let x1 = svgRect.left + parseFloat(line.getAttribute('x1'));
+          let x2 = svgRect.left + parseFloat(line.getAttribute('x2'));
+          let y = svgRect.top + parseFloat(line.getAttribute('y1'));
+
+          const isVisible = (
+            y >= 0 && 
+            y <= window.innerHeight &&
+            x1 >= 0 && 
+            x2 <= window.innerWidth
+          );
+
+          if (!isVisible) {
+            const underlinePage = matchingUnderline.groupElement.closest('.kix-page-paginated');
+            if (underlinePage) {
+              const docContainer = document.querySelector('.kix-appview-editor');
+
+              const pageRect = underlinePage.getBoundingClientRect();
+              const targetScrollTop = pageRect.top + docContainer.scrollTop + 
+                                      parseFloat(line.getAttribute('y1')) - 200;
+              
+              docContainer.scrollTop = targetScrollTop;
+
+              await new Promise(resolve => setTimeout(resolve, 300));
+
+              const updatedSvgRect = matchingUnderline.boundingRect.svgElement.getBoundingClientRect();
+              x1 = updatedSvgRect.left + parseFloat(line.getAttribute('x1'));
+              x2 = updatedSvgRect.left + parseFloat(line.getAttribute('x2'));
+              y = updatedSvgRect.top + parseFloat(line.getAttribute('y1'));
+            }
+          }
+
+          contentDiv.focus();
+          await new Promise(r => setTimeout(r, 50));
 
           const tileManager = document.querySelector('.kix-rotatingtilemanager-content');
+
           tileManager.dispatchEvent(new MouseEvent('mousedown', {
             bubbles: true,
             cancelable: true,
@@ -93,15 +123,15 @@ export function initializeGDocsTracker() {
             clientY: y
           }));
 
-          await new Promise(r => setTimeout(r, 50));
+          await new Promise(r => setTimeout(r, 20));
           document.execCommand('delete');
-          await new Promise(r => setTimeout(r, 50));
-
+          await new Promise(r => setTimeout(r, 20));
+      
           const differences = Underline.findTextDifferences(
             correction.originalText,
             correction.corrected_text
           );
-
+      
           const clipboardData = new DataTransfer();
           clipboardData.setData('text/plain', differences.newDiff);
           contentDiv.dispatchEvent(new ClipboardEvent('paste', {
@@ -109,9 +139,8 @@ export function initializeGDocsTracker() {
             cancelable: true,
             clipboardData
           }));
-
+      
         } catch (error) {
-          
           throw error;
         }
       },
