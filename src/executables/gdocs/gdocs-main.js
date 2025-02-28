@@ -1,67 +1,5 @@
 export function initializeGDocsTracker() {
   window._docs_annotate_canvas_by_ext = "kbfnbcaeplbcioakkpcpgfkobkghlhen";
-
-  function createAuthForm() {
-    const formContainer = document.createElement('div');
-    formContainer.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      z-index: 10000;
-    `;
-
-    const trustedHTML = new TrustedHTML(`
-      <h2 style="margin-bottom: 20px;">Sign In</h2>
-      <form id="auth-form">
-        <div style="margin-bottom: 15px;">
-          <input type="email" id="email" placeholder="Email" style="
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-          ">
-        </div>
-        <div style="margin-bottom: 15px;">
-          <input type="password" id="password" placeholder="Password" style="
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-          ">
-        </div>
-        <button type="submit" style="
-          width: 100%;
-          padding: 10px;
-          background: #0070f3;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-        ">Sign In</button>
-        <button type="button" id="google-signin" style="
-          width: 100%;
-          padding: 10px;
-          margin-top: 10px;
-          background: #fff;
-          color: #757575;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          cursor: pointer;
-        ">Sign in with Google</button>
-      </form>
-    `);
-
-    formContainer.setHTML(trustedHTML);
-    return formContainer;
-  }
-
   function waitForEditorReady(callback) {
     const observer = new MutationObserver(() => {
       const editor = document.querySelector(".kix-appview-editor");
@@ -84,8 +22,6 @@ export function initializeGDocsTracker() {
   }
 
   async function runMainScript() {
-    
-
     const [
       { SlashCommand },
       { Underline },
@@ -116,6 +52,7 @@ export function initializeGDocsTracker() {
       findTextDifferences: Underline.findTextDifferences,
       getUnderlineElements: () => underline.underlineElements,
       handleCorrection: async (correction) => {
+        // eslint-disable-next-line no-useless-catch
         try {
           const textEventIframe = document.querySelector('.docs-texteventtarget-iframe');
           const contentDiv = textEventIframe.contentDocument.querySelector('div[aria-label="Document content"]');

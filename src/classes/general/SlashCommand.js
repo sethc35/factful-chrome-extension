@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 
+
 export class SlashCommand {
     constructor() {
         this.slashCommands = {
@@ -189,28 +190,26 @@ export class SlashCommand {
         else if (element.isContentEditable) {
             const selection = window.getSelection();
             if (!selection.rangeCount) return null;
-
-            const marker = document.createElement('span');
-            marker.innerHTML = '&#feff;';  // Zero-width space
-            const range = selection.getRangeAt(0).cloneRange();
-            range.collapse(true);
-            range.insertNode(marker);
-
-            const rect = marker.getBoundingClientRect();
-            const computed = window.getComputedStyle(element);
-
-            const scrollX = window.scrollX || window.pageXOffset;
-            const scrollY = window.scrollY || window.pageYOffset;
-
-            const containerRect = element.getBoundingClientRect();
-            const left = rect.left + scrollX - containerRect.left;
-            const top = rect.top + scrollY - containerRect.top;
-
-            marker.parentNode?.removeChild(marker);
     
+            const range = selection.getRangeAt(0).cloneRange();
+            
+            const marker = document.createElement('span');
+            marker.innerHTML = '&#65279;';  // Zero-width space
+            range.insertNode(marker);
+    
+            const rect = marker.getBoundingClientRect();
+            
+            if (marker.parentNode) {
+                marker.parentNode.removeChild(marker);
+            }
+            
+            // Account for scroll position
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            
             return { 
-                left: left + parseInt(computed.paddingLeft),
-                top: top + parseInt(computed.paddingTop)
+                left: rect.left + scrollX,
+                top: rect.top + scrollY
             };
         }
         return null;
@@ -227,6 +226,7 @@ export class SlashCommand {
             const preCaretRange = range.cloneRange();
             preCaretRange.selectNodeContents(element);
             preCaretRange.setEnd(range.endContainer, range.endOffset);
+            console.log('cursor pos in contentedtiable div: ', preCaretRange.toString());
             return preCaretRange.toString().length;
         }
         return null;
@@ -396,37 +396,33 @@ export class SlashCommand {
     }
 
     selectCommand(command) {
-        const popdownRect = this.slashCommandUI.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const isAboveCursor = popdownRect.top > viewportHeight / 2;
-    
+        const popdownRect = this.slashCommandUI.getBoundingClientRect()
+        const viewportHeight = window.innerHeight
+        const slashCommandHeight = popdownRect.height
         this.lastPopdownPosition = {
             left: popdownRect.left,
             top: popdownRect.top,
             bottom: popdownRect.bottom,
             width: popdownRect.width,
-            isAboveCursor: isAboveCursor
-        };
-    
-        const element = this.lastFocusedElement || document.activeElement;
-        this.originalRange = null;
-    
+            isAboveCursor: popdownRect.bottom > viewportHeight
+        }
+        const element = this.lastFocusedElement || document.activeElement
+        this.originalRange = null
         if (element.isContentEditable) {
-            const sel = window.getSelection();
+            const sel = window.getSelection()
             if (sel.rangeCount > 0) {
-                this.originalRange = sel.getRangeAt(0).cloneRange();
+                this.originalRange = sel.getRangeAt(0).cloneRange()
             }
         } else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
             this.originalRange = {
                 start: element.selectionStart,
                 end: element.selectionEnd
-            };
+            }
         }
-    
-        this.removeLastTextNode(element);
-        this.insertCommandBadge(command);
-        this.resetTracking();
-    }
+        this.removeLastTextNode(element)
+        this.insertCommandBadge(command)
+        this.resetTracking()
+    }    
     
     resetTracking() {
         this.isActive = false;
@@ -457,7 +453,7 @@ export class SlashCommand {
             let left = cursorRect.left;
             let top = cursorRect.bottom + 5;
             let isAboveCursor = false;
-
+    
             const spaceBelow = viewportHeight - cursorRect.bottom;
             const spaceAbove = cursorRect.top;
             
@@ -481,6 +477,15 @@ export class SlashCommand {
                 width: uiRect.width,
                 isAboveCursor: isAboveCursor
             };
+            
+            console.log('Slash command popup position:', {
+                left: left,
+                top: top,
+                width: uiRect.width,
+                height: uiRect.height,
+                isAboveCursor: isAboveCursor
+            });
+            console.log('Slash command popup bounding rect:', this.slashCommandUI.getBoundingClientRect());
         } else {
             this.slashCommandUI.style.display = 'none';
         }
@@ -519,7 +524,6 @@ export class SlashCommand {
     insertCommandBadge(command) {
         const element = this.lastFocusedElement || document.activeElement
         if (!element) return
-    
         const badge = document.createElement('div')
         badge.className = 'command-badge-overlay'
         badge.dataset.command = command
@@ -540,7 +544,6 @@ export class SlashCommand {
         badge.style.cursor = 'text'
         badge.style.border = '1px solid transparent'
         badge.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
-    
         const commandPart = document.createElement('span')
         commandPart.style.color = '#1d4ed8'
         commandPart.style.fontWeight = '700'
@@ -548,7 +551,6 @@ export class SlashCommand {
         commandPart.style.userSelect = 'none'
         commandPart.style.pointerEvents = 'none'
         commandPart.textContent = command
-    
         const paramSpan = document.createElement('span')
         paramSpan.style.color = '#444746'
         paramSpan.style.minWidth = '1px'
@@ -557,15 +559,13 @@ export class SlashCommand {
         paramSpan.style.padding = '0 2px'
         paramSpan.contentEditable = 'true'
         paramSpan.dataset.placeholder = 'Parameter'
-    
         badge.appendChild(commandPart)
         badge.appendChild(paramSpan)
-    
         let overlayContainer = document.querySelector('.command-overlay-container')
         if (!overlayContainer) {
             overlayContainer = document.createElement('div')
             overlayContainer.className = 'command-overlay-container'
-            overlayContainer.style.position = 'fixed'
+            overlayContainer.style.position = 'absolute'
             overlayContainer.style.top = '0'
             overlayContainer.style.left = '0'
             overlayContainer.style.right = '0'
@@ -575,26 +575,31 @@ export class SlashCommand {
             document.body.appendChild(overlayContainer)
         }
         overlayContainer.appendChild(badge)
-
         if (this.lastPopdownPosition) {
-            const badgeHeight = 20;
-            let verticalOffset;
-    
+            const badgeHeight = 20
+            let badgeLeft = this.lastPopdownPosition.left
+            let badgeTop
             if (this.lastPopdownPosition.isAboveCursor) {
-                verticalOffset = this.lastPopdownPosition.bottom + 5;
-                badge.style.top = `${verticalOffset}px`;
+                badgeTop = this.lastPopdownPosition.bottom - 5
             } else {
-                verticalOffset = this.lastPopdownPosition.top - badgeHeight - 5;
-                badge.style.top = `${verticalOffset}px`;
+                badgeTop = this.lastPopdownPosition.top - badgeHeight - 5
             }
-            
-            badge.style.left = `${this.lastPopdownPosition.left}px`;
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop
+            badge.style.left = `${badgeLeft + scrollX}px`
+            badge.style.top = `${badgeTop + scrollY}px`
+        } else {
+            const cursorCoords = this.getCursorCoordinates(element, this.getCaretPosition(element))
+            if (cursorCoords) {
+                const scrollX = window.pageXOffset || document.documentElement.scrollLeft
+                const scrollY = window.pageYOffset || document.documentElement.scrollTop
+                badge.style.left = `${cursorCoords.left + scrollX}px`
+                badge.style.top = `${cursorCoords.top - 25 + scrollY}px`
+            }
         }
-    
         requestAnimationFrame(() => {
             paramSpan.focus()
         })
-    
         paramSpan.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -622,13 +627,76 @@ export class SlashCommand {
                 element.focus()
             }
         })
-    
         badge.addEventListener('mousedown', (e) => {
             e.stopPropagation()
             if (e.target === paramSpan || e.target === badge) {
                 paramSpan.focus()
             }
         })
+    }
+    
+    createPopdown(items, targetElement) {
+        const itemsArray = Array.isArray(items) ? items : [items];
+        
+        const popdown = document.createElement('div');
+        popdown.style.position = 'fixed';
+        popdown.style.backgroundColor = '#fff';
+        popdown.style.border = '1px solid #e0e0e0';
+        popdown.style.borderRadius = '8px';
+        popdown.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        popdown.style.padding = '8px';
+        popdown.style.zIndex = '9999999';
+        popdown.style.display = 'flex';
+        popdown.style.flexDirection = 'column';
+        popdown.style.gap = '4px';
+    
+        if (this.lastPopdownPosition) {
+            const viewportHeight = window.innerHeight;
+            const verticalOffset = 10;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            
+            popdown.style.left = `${this.lastPopdownPosition.left}px`;
+            
+            if (this.lastPopdownPosition.bottom + verticalOffset + 200 > viewportHeight) {
+                popdown.style.top = `${this.lastPopdownPosition.top - verticalOffset - 200}px`;
+            } else {
+                popdown.style.top = `${this.lastPopdownPosition.bottom + verticalOffset}px`;
+            }
+        } else {
+            const coords = this.getCursorCoordinates(targetElement, this.getCaretPosition(targetElement));
+            if (coords) {
+                popdown.style.left = `${coords.left}px`;
+                popdown.style.top = `${coords.top + 20}px`;
+            }
+        }
+    
+        console.log('Popdown position:', {
+            left: popdown.style.left,
+            top: popdown.style.top
+        });
+    
+        setTimeout(() => {
+            console.log('Popdown bounding rect:', popdown.getBoundingClientRect());
+        }, 0);
+    
+        let isProcessing = false;
+    
+        // Rest of the method remains the same...
+        itemsArray.forEach(item => {
+            // Existing code for creating buttons...
+        });
+    
+        document.body.appendChild(popdown);
+    
+        const handleOutside = (e) => {
+            if (!popdown.contains(e.target)) {
+                popdown.remove();
+                document.removeEventListener('mousedown', handleOutside);
+            }
+        };
+        document.addEventListener('mousedown', handleOutside);
+        
+        return popdown;
     }
 
     getCursorPosition(element) {
@@ -637,6 +705,7 @@ export class SlashCommand {
         }
         if (element.isContentEditable) {
             const selection = window.getSelection()
+            console.log('cursor position in contenteditable div: ', selection)
             if (!selection.rangeCount) {
                 return null
             }
@@ -644,6 +713,7 @@ export class SlashCommand {
             const preCaretRange = range.cloneRange()
             preCaretRange.selectNodeContents(element)
             preCaretRange.setEnd(range.endContainer, range.endOffset)
+            console.log('pre caret range: ', preCaretRange.toString().length)
             return { position: preCaretRange.toString().length }
         }
         return null
@@ -734,126 +804,5 @@ export class SlashCommand {
         } catch {
             return null;
         }
-    }
-
-    async createPopdown(items, targetElement) {
-        const itemsArray = Array.isArray(items) ? items : [items];
-        
-        const popdown = document.createElement('div');
-        popdown.style.position = 'fixed';
-        popdown.style.backgroundColor = '#fff';
-        popdown.style.border = '1px solid #e0e0e0';
-        popdown.style.borderRadius = '8px';
-        popdown.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-        popdown.style.padding = '8px';
-        popdown.style.zIndex = '9999999';
-        popdown.style.display = 'flex';
-        popdown.style.flexDirection = 'column';
-        popdown.style.gap = '4px';
-    
-        const badgeRect = this.lastPopdownPosition;
-        const viewportHeight = window.innerHeight;
-        const verticalOffset = 10;
-    
-        popdown.style.left = `${badgeRect.left}px`;
-        popdown.style.top = `${badgeRect.top + verticalOffset}px`;
-    
-        let isProcessing = false;
-    
-        itemsArray.forEach(item => {
-            const btn = document.createElement('button');
-            btn.textContent = item;
-            btn.style.padding = '8px 12px';
-            btn.style.border = 'none';
-            btn.style.borderRadius = '4px';
-            btn.style.backgroundColor = '#f3f4f6';
-            btn.style.cursor = 'pointer';
-            btn.style.width = '100%';
-            btn.style.textAlign = 'left';
-            btn.style.color = '#374151';
-            btn.style.fontFamily = "'Google Sans', Roboto, Arial, sans-serif";
-            btn.style.fontSize = '14px';
-    
-            btn.addEventListener('mouseover', () => {
-                btn.style.backgroundColor = '#e5e7eb';
-            });
-    
-            btn.addEventListener('mouseout', () => {
-                btn.style.backgroundColor = '#f3f4f6';
-            });
-
-            btn.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-            });
-    
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (isProcessing) return;
-                isProcessing = true;
-            
-                popdown.remove();
-                document.removeEventListener('mousedown', handleOutside);
-            
-                const element = this.lastFocusedElement || document.activeElement;
-                if (!element) return;
-            
-                requestAnimationFrame(() => {
-                    try {
-                        if (element.isContentEditable) {
-                            const sel = window.getSelection();
-                            let range = null;
-            
-                            if (sel.rangeCount) {
-                                range = sel.getRangeAt(0);
-                            } else if (this.originalRange) {
-                                range = this.originalRange.cloneRange();
-                                sel.addRange(range);
-                            } else {
-                                range = document.createRange();
-                                range.selectNodeContents(element);
-                                range.collapse(false);
-                                sel.addRange(range);
-                            }
-            
-                            const textNode = document.createTextNode(item + ' ');
-                            range.deleteContents();
-                            range.insertNode(textNode);
-            
-                            const newRange = document.createRange();
-                            newRange.setStart(textNode, textNode.length);
-                            newRange.collapse(true);
-                            sel.removeAllRanges();
-                            sel.addRange(newRange);
-                            
-                            this.originalRange = newRange.cloneRange();
-                        } else {
-                            const start = element.selectionStart;
-                            element.setRangeText(item, start, start, 'end');
-                            element.selectionEnd = start + item.length;
-                        }
-            
-                        element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-                    } catch (error) {
-                        
-                    }
-            
-                    setTimeout(() => {
-                        isProcessing = false;
-                    }, 50);
-                });
-            });     
-    
-            popdown.appendChild(btn);
-        });
-    
-        document.body.appendChild(popdown);
-    
-        const handleOutside = (e) => {
-            if (!popdown.contains(e.target)) {
-                popdown.remove();
-                document.removeEventListener('mousedown', handleOutside);
-            }
-        };
-        document.addEventListener('mousedown', handleOutside);
     }
 }
