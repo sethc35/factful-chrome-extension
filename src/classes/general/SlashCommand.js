@@ -396,14 +396,12 @@ export class SlashCommand {
 
     selectCommand(command) {
         const popdownRect = this.slashCommandUI.getBoundingClientRect()
-        const viewportHeight = window.innerHeight
-        const slashCommandHeight = popdownRect.height
         this.lastPopdownPosition = {
             left: popdownRect.left,
             top: popdownRect.top,
             bottom: popdownRect.bottom,
             width: popdownRect.width,
-            isAboveCursor: popdownRect.bottom > viewportHeight
+            isAboveCursor: false
         }
         const element = this.lastFocusedElement || document.activeElement
         this.originalRange = null
@@ -446,24 +444,8 @@ export class SlashCommand {
         });
     
         if (filteredCommands.length > 0) {
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const uiRect = this.slashCommandUI.getBoundingClientRect();
             let left = cursorRect.left;
             let top = cursorRect.bottom + 5;
-            let isAboveCursor = false;
-    
-            const spaceBelow = viewportHeight - cursorRect.bottom;
-            const spaceAbove = cursorRect.top;
-            
-            if (spaceBelow < uiRect.height && spaceAbove > uiRect.height) {
-                top = cursorRect.top - uiRect.height - 5;
-                isAboveCursor = true;
-            }
-    
-            if (left + uiRect.width > viewportWidth) {
-                left = viewportWidth - uiRect.width - 10;
-            }
     
             this.slashCommandUI.style.left = Math.max(10, left) + 'px';
             this.slashCommandUI.style.top = Math.max(10, top) + 'px';
@@ -472,17 +454,17 @@ export class SlashCommand {
             this.lastPopdownPosition = {
                 left: left,
                 top: top,
-                bottom: top + uiRect.height,
-                width: uiRect.width,
-                isAboveCursor: isAboveCursor
+                bottom: top + this.slashCommandUI.getBoundingClientRect().height,
+                width: this.slashCommandUI.getBoundingClientRect().width,
+                isAboveCursor: false
             };
             
             console.log('Slash command popup position:', {
                 left: left,
                 top: top,
-                width: uiRect.width,
-                height: uiRect.height,
-                isAboveCursor: isAboveCursor
+                width: this.slashCommandUI.getBoundingClientRect().width,
+                height: this.slashCommandUI.getBoundingClientRect().height,
+                isAboveCursor: false
             });
             console.log('Slash command popup bounding rect:', this.slashCommandUI.getBoundingClientRect());
         } else {
@@ -523,6 +505,8 @@ export class SlashCommand {
     insertCommandBadge(command) {
         const element = this.lastFocusedElement || document.activeElement
         if (!element) return
+        
+        // Create the badge
         const badge = document.createElement('div')
         badge.className = 'command-badge-overlay'
         badge.dataset.command = command
@@ -543,6 +527,8 @@ export class SlashCommand {
         badge.style.cursor = 'text'
         badge.style.border = '1px solid transparent'
         badge.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
+        
+        // Create the command part
         const commandPart = document.createElement('span')
         commandPart.style.color = '#1d4ed8'
         commandPart.style.fontWeight = '700'
@@ -550,6 +536,8 @@ export class SlashCommand {
         commandPart.style.userSelect = 'none'
         commandPart.style.pointerEvents = 'none'
         commandPart.textContent = command
+        
+        // Create the parameter part
         const paramSpan = document.createElement('span')
         paramSpan.style.color = '#444746'
         paramSpan.style.minWidth = '1px'
@@ -558,8 +546,12 @@ export class SlashCommand {
         paramSpan.style.padding = '0 2px'
         paramSpan.contentEditable = 'true'
         paramSpan.dataset.placeholder = 'Parameter'
+        
+        // Append parts to badge
         badge.appendChild(commandPart)
         badge.appendChild(paramSpan)
+        
+        // Create or get overlay container
         let overlayContainer = document.querySelector('.command-overlay-container')
         if (!overlayContainer) {
             overlayContainer = document.createElement('div')
@@ -574,31 +566,42 @@ export class SlashCommand {
             document.body.appendChild(overlayContainer)
         }
         overlayContainer.appendChild(badge)
+
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop
+
         if (this.lastPopdownPosition) {
+            console.log('last popdown postiion detected')
             const badgeHeight = 20
-            let badgeLeft = this.lastPopdownPosition.left
-            let badgeTop
-            if (this.lastPopdownPosition.isAboveCursor) {
-                badgeTop = this.lastPopdownPosition.bottom - 5
-            } else {
-                badgeTop = this.lastPopdownPosition.top - badgeHeight - 5
-            }
-            const scrollX = window.pageXOffset || document.documentElement.scrollLeft
-            const scrollY = window.pageYOffset || document.documentElement.scrollTop
-            badge.style.left = `${badgeLeft + scrollX}px`
-            badge.style.top = `${badgeTop + scrollY}px`
+            badge.style.left = `${this.lastPopdownPosition.left + scrollX}px`
+            badge.style.top = `${this.lastPopdownPosition.top - badgeHeight - 5 + scrollY}px`
+            
+            console.log('Badge positioned from lastPopdownPosition:', {
+                left: badge.style.left,
+                top: badge.style.top
+            })
         } else {
+            console.log('falling back to cursor coordinates....')
             const cursorCoords = this.getCursorCoordinates(element, this.getCaretPosition(element))
             if (cursorCoords) {
-                const scrollX = window.pageXOffset || document.documentElement.scrollLeft
-                const scrollY = window.pageYOffset || document.documentElement.scrollTop
                 badge.style.left = `${cursorCoords.left + scrollX}px`
                 badge.style.top = `${cursorCoords.top - 25 + scrollY}px`
+                
+                console.log('Badge positioned from cursor coordinates:', {
+                    left: badge.style.left,
+                    top: badge.style.top
+                })
+            } else {
+                console.error('Failed to position badge - no coordinates available')
             }
         }
+        
+        // Focus parameter input
         requestAnimationFrame(() => {
             paramSpan.focus()
         })
+        
+        // Add event listeners
         paramSpan.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -626,6 +629,7 @@ export class SlashCommand {
                 element.focus()
             }
         })
+        
         badge.addEventListener('mousedown', (e) => {
             e.stopPropagation()
             if (e.target === paramSpan || e.target === badge) {
@@ -650,17 +654,11 @@ export class SlashCommand {
         popdown.style.gap = '4px';
     
         if (this.lastPopdownPosition) {
-            const viewportHeight = window.innerHeight;
-            const verticalOffset = 10;
             const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            const verticalOffset = 10;
             
             popdown.style.left = `${this.lastPopdownPosition.left}px`;
-            
-            if (this.lastPopdownPosition.bottom + verticalOffset + 200 > viewportHeight) {
-                popdown.style.top = `${this.lastPopdownPosition.top - verticalOffset - 200}px`;
-            } else {
-                popdown.style.top = `${this.lastPopdownPosition.bottom + verticalOffset}px`;
-            }
+            popdown.style.top = `${this.lastPopdownPosition.bottom + verticalOffset}px`;
         } else {
             const coords = this.getCursorCoordinates(targetElement, this.getCaretPosition(targetElement));
             if (coords) {
@@ -679,7 +677,7 @@ export class SlashCommand {
         }, 0);
     
         let isProcessing = false;
-
+    
         itemsArray.forEach(item => {
             const btn = document.createElement('button');
             btn.textContent = item;
@@ -701,7 +699,7 @@ export class SlashCommand {
             btn.addEventListener('mouseout', () => {
                 btn.style.backgroundColor = '#f3f4f6';
             });
-
+    
             btn.addEventListener('mousedown', (e) => {
                 e.preventDefault();
             });
@@ -781,22 +779,20 @@ export class SlashCommand {
 
     getCursorPosition(element) {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-            return { position: element.selectionStart }
+            const cursorPos = element.selectionStart;
+            const coords = this.getCursorCoordinates(element, cursorPos);
+            return coords;
         }
         if (element.isContentEditable) {
-            const selection = window.getSelection()
-            console.log('cursor position in contenteditable div: ', selection)
+            const selection = window.getSelection();
             if (!selection.rangeCount) {
-                return null
+                return null;
             }
-            const range = selection.getRangeAt(0)
-            const preCaretRange = range.cloneRange()
-            preCaretRange.selectNodeContents(element)
-            preCaretRange.setEnd(range.endContainer, range.endOffset)
-            console.log('pre caret range: ', preCaretRange.toString().length)
-            return { position: preCaretRange.toString().length }
+            const range = selection.getRangeAt(0);
+            const coords = this.getCursorCoordinates(element, range.startOffset);
+            return coords;
         }
-        return null
+        return null;
     }
 
     getPrecedingWords(element, wordCount = 10) {

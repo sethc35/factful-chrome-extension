@@ -12,7 +12,7 @@ Backend.fetchData = async function(textInput) {
         const query = encodeURIComponent(textInput);
         const settings = await returnSettings();
         const accessToken = await getAccessToken();
-        const url = `https://backend.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`
+        const url = `https://app.factful.io/process_text?input=${query}&locale=${settings.language}&style=${settings.outputType}`
 
         const response = await fetch(url, {
             method: 'GET',
@@ -76,11 +76,11 @@ Backend.sendCommand = async function(command, parameter, useSearch = false, cont
 
         var url;
         if (isSearch) {
-            url = `https://backend.factful.io/${endpoint}?query=${query}&context=${context}`;
+            url = `https://app.factful.io/${endpoint}?query=${query}&context=${context}`;
         } else if (isGenerate) {
-            url = `https://backend.factful.io/${endpoint}?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`;
+            url = `https://app.factful.io/${endpoint}?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`;
         } else {
-            url = `https://backend.factful.io/${endpoint}?word=${query}`;
+            url = `https://app.factful.io/${endpoint}?word=${query}`;
         }
 
         
@@ -144,10 +144,10 @@ Backend.sendButton = async function(command, input, language, useSearch = false)
         }
 
         const url = isTranslate 
-            ? `https://backend.factful.io/translate?text=${query}&language=${language}`
+            ? `https://app.factful.io/translate?text=${query}&language=${language}`
             : isSearch
-                ? `https://backend.factful.io/${endpoint}?query=${query}`
-                : `https://backend.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
+                ? `https://app.factful.io/${endpoint}?query=${query}`
+                : `https://app.factful.io/${endpoint}?text=${query}&locale=${settings.language}&style=${settings.outputType}`
 
         const response = await fetch(url, {
             method: 'GET',
@@ -184,7 +184,7 @@ Backend.fetchHtml = async function(textInput, useSearch = false) {
         const settings = await returnSettings();
         
         
-        const response = await fetch(`https://backend.factful.io/generate-html?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`, {
+        const response = await fetch(`https://app.factful.io/generate-html?prompt=${query}&locale=${settings.language}&style=${settings.outputType}&use_search=${useSearch}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -353,7 +353,7 @@ function injectRelayScript(tabId) {
                                 const accessToken = response.access_token;
                                 
                                 const query = encodeURIComponent(event.data.parameter);
-                                const url = `https://backend.factful.io/smart-search?query=${query}`;
+                                const url = `https://app.factful.io/smart-search?query=${query}`;
                                 
                                 const apiResponse = await fetch(url, {
                                     method: 'GET',
@@ -388,7 +388,7 @@ function injectRelayScript(tabId) {
                             chrome.runtime.sendMessage({ action: 'getAccessToken' }, async (response) => {
                                 const accessToken = response.access_token;
                                 const query = encodeURIComponent(event.data.parameter);
-                                const url = `https://backend.factful.io/generate-text?prompt=${query}`;
+                                const url = `https://app.factful.io/generate-text?prompt=${query}`;
                                 
                                 const apiResponse = await fetch(url, {
                                     method: 'GET',
@@ -458,7 +458,7 @@ function validateAccessTokenForGoogleDocs(tabId) {
 
         if (accessToken) {
             
-            const response = await fetch(`https://backend.factful.io/verify_access_token`, {
+            const response = await fetch(`https://app.factful.io/verify_access_token`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${accessToken}`
@@ -496,7 +496,7 @@ function validateAccessToken(tabId) {
         const accessToken = data.access_token;
 
         if (accessToken) {
-            const response = await fetch(`https://backend.factful.io/verify_access_token`, {
+            const response = await fetch(`https://app.factful.io/verify_access_token`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${accessToken}`
