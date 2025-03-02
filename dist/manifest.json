@@ -40,7 +40,7 @@
       "default_popup": "login_widget.html"
     },
     "content_security_policy": {
-      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://app.factful.io"
+      "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://api.factful.io"
     },
     "web_accessible_resources": [{
       "resources": [

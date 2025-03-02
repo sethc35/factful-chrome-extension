@@ -913,7 +913,7 @@ export class SlashCommand {
         if (command === "/synonym") {
           try {
             const response = await fetch(
-              `https://app.factful.io/get-syn?word=${encodeURIComponent(
+              `https://api.factful.io/get-syn?word=${encodeURIComponent(
                 parameter
               )}`,
               {
@@ -991,7 +991,7 @@ export class SlashCommand {
         } else if (command === "/antonym") {
           try {
             const response = await fetch(
-              `https://app.factful.io/get-ant?word=${encodeURIComponent(
+              `https://api.factful.io/get-ant?word=${encodeURIComponent(
                 parameter
               )}`,
               {

@@ -57,7 +57,7 @@ export class ApiService {
       
       const query = encodeURIComponent(textContent)
       const response = await fetch(
-        `https://app.factful.io/process_text?input=${query}`,
+        `https://api.factful.io/process_text?input=${query}`,
         {
           method: "GET",
           headers: {
