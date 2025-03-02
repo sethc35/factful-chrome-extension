@@ -546,12 +546,10 @@ export class SlashCommand {
         paramSpan.style.padding = '0 2px'
         paramSpan.contentEditable = 'true'
         paramSpan.dataset.placeholder = 'Parameter'
-        
-        // Append parts to badge
+
         badge.appendChild(commandPart)
         badge.appendChild(paramSpan)
-        
-        // Create or get overlay container
+
         let overlayContainer = document.querySelector('.command-overlay-container')
         if (!overlayContainer) {
             overlayContainer = document.createElement('div')
