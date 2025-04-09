@@ -3,7 +3,8 @@
 
 
 export class SlashCommand {
-    constructor() {
+    constructor(shadowRoot) {
+        this.shadowRoot = shadowRoot || document.body;
         this.slashCommands = {
             '/synonym': {
                 description: 'Get synonyms for a word',
@@ -62,6 +63,11 @@ export class SlashCommand {
     addStyles() {
         const style = document.createElement('style');
         style.textContent = `
+            /* Reset styles for Shadow DOM */
+            :host {
+                all: initial;
+            }
+            
             .slash-command-ui {
                 position: absolute;
                 background-color: #fff;
@@ -135,19 +141,19 @@ export class SlashCommand {
                 pointer-events: none;
             }
         `;
-        document.head.appendChild(style);
+        this.shadowRoot.appendChild(style);
     }    
 
     createSlashCommandUI() {
         this.slashCommandUI = document.createElement('div')
         this.slashCommandUI.className = 'slash-command-ui'
-        document.body.appendChild(this.slashCommandUI)
+        this.shadowRoot.appendChild(this.slashCommandUI)
     }
 
     createParameterUI() {
         this.parameterUI = document.createElement('div')
         this.parameterUI.className = 'parameter-ui'
-        document.body.appendChild(this.parameterUI)
+        this.shadowRoot.appendChild(this.parameterUI)
     }
 
     getCursorCoordinates(element, position) {
@@ -175,7 +181,7 @@ export class SlashCommand {
             const marker = document.createElement('span');
             marker.textContent = '|';
             mirror.appendChild(marker);
-            document.body.appendChild(mirror);
+            this.shadowRoot.appendChild(mirror);
     
             const markerRect = marker.getBoundingClientRect();
             const elementRect = element.getBoundingClientRect();
@@ -184,7 +190,7 @@ export class SlashCommand {
                 top: elementRect.top + (markerRect.top - mirror.getBoundingClientRect().top)
             };
     
-            document.body.removeChild(mirror);
+            this.shadowRoot.removeChild(mirror);
             return coords;
         } 
         else if (element.isContentEditable) {
@@ -505,8 +511,7 @@ export class SlashCommand {
     insertCommandBadge(command) {
         const element = this.lastFocusedElement || document.activeElement
         if (!element) return
-        
-        // Create the badge
+
         const badge = document.createElement('div')
         badge.className = 'command-badge-overlay'
         badge.dataset.command = command
@@ -527,8 +532,7 @@ export class SlashCommand {
         badge.style.cursor = 'text'
         badge.style.border = '1px solid transparent'
         badge.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
-        
-        // Create the command part
+
         const commandPart = document.createElement('span')
         commandPart.style.color = '#1d4ed8'
         commandPart.style.fontWeight = '700'
@@ -536,8 +540,7 @@ export class SlashCommand {
         commandPart.style.userSelect = 'none'
         commandPart.style.pointerEvents = 'none'
         commandPart.textContent = command
-        
-        // Create the parameter part
+
         const paramSpan = document.createElement('span')
         paramSpan.style.color = '#444746'
         paramSpan.style.minWidth = '1px'
@@ -550,7 +553,7 @@ export class SlashCommand {
         badge.appendChild(commandPart)
         badge.appendChild(paramSpan)
 
-        let overlayContainer = document.querySelector('.command-overlay-container')
+        let overlayContainer = this.shadowRoot.querySelector('.command-overlay-container')
         if (!overlayContainer) {
             overlayContainer = document.createElement('div')
             overlayContainer.className = 'command-overlay-container'
@@ -561,7 +564,7 @@ export class SlashCommand {
             overlayContainer.style.bottom = '0'
             overlayContainer.style.zIndex = '9999997'
             overlayContainer.style.pointerEvents = 'none'
-            document.body.appendChild(overlayContainer)
+            this.shadowRoot.appendChild(overlayContainer)
         }
         overlayContainer.appendChild(badge)
 
@@ -593,13 +596,11 @@ export class SlashCommand {
                 console.error('Failed to position badge - no coordinates available')
             }
         }
-        
-        // Focus parameter input
+
         requestAnimationFrame(() => {
             paramSpan.focus()
         })
-        
-        // Add event listeners
+
         paramSpan.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -762,7 +763,7 @@ export class SlashCommand {
             popdown.appendChild(btn);
         });
     
-        document.body.appendChild(popdown);
+        this.shadowRoot.appendChild(popdown);
     
         const handleOutside = (e) => {
             if (!popdown.contains(e.target)) {
@@ -813,6 +814,7 @@ export class SlashCommand {
         return words.slice(-wordCount).join(' ');
     }
 
+    // TODO: append spinner to shadow dom
     createSpinner() {
         const spinner = document.createElement('span')
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')

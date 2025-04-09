@@ -8,16 +8,29 @@ import { Tooltip } from '../../classes/general/Tooltip.js'
 import { Underline } from '../../classes/general/Underline.js'
 
 async function initializeExtension() {
+  const shadowContainer = document.createElement('div');
+  shadowContainer.id = 'factful-extension-container';
+  document.body.appendChild(shadowContainer);
+
+  const shadowRoot = shadowContainer.attachShadow({ mode: 'open' });
+  const globalStyles = document.createElement('style');
+  globalStyles.textContent = `
+    :host {
+      all: initial;
+      font-family: Arial, sans-serif;
+    }
+  `;
+  shadowRoot.appendChild(globalStyles);
   let activeElement = null
   let hoveredUnderline = null
   let currentHoverElement = null
   let tooltipHideTimeout = null
   let isTyping = false
   let typeTimeout = null
-  const underline = new Underline();
-  const tooltip = new Tooltip();
-  const slashCommand = new SlashCommand();
-  const chatWindow = new ChatWindow();
+  const underline = new Underline(shadowRoot);
+  const tooltip = new Tooltip(shadowRoot);
+  const slashCommand = new SlashCommand(shadowRoot);
+  const chatWindow = new ChatWindow(shadowRoot);
   chatWindow.onVisibilityChange = (isVisible) => {
       if (isVisible) {
           chatWindow.enableHighlighting();
@@ -36,26 +49,19 @@ async function initializeExtension() {
   const currentUrl = window.location.href;
   const baseUrl = new URL(currentUrl).hostname;
 
-  
-  
-
   if (disabledDomains.includes(baseUrl)) {
       
       return;
   }
 
-  const pill = new Pill("../assets/factful-icon-transparent.png", chatWindow);
+  const pill = new Pill("../assets/factful-icon-transparent.png", chatWindow, shadowRoot);
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'setAccessToken') {
       if (request.error) {
         pill.changeAuthenticationState(false)
-
-        
       } else {
         pill.changeAuthenticationState(true)
-
-        
       }
 
       sendResponse({ success: true });
@@ -83,9 +89,6 @@ async function initializeExtension() {
       if (response.error) {
         return;
       }
-
-      
-
       return response
     }).catch(() => null)
   }
